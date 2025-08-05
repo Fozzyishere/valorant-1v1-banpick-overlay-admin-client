@@ -160,7 +160,6 @@ export function getAvailableAssets(
  * Validate turn transition to prevent invalid states
  */
 export function validateTurnTransition(
-  currentAction: number,
   targetAction: number,
   maxCompletedAction: number
 ): { valid: boolean; error?: string } {

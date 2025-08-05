@@ -12,10 +12,7 @@ import {
   getCurrentPhase,
   getActionType,
   validateTurnTransition,
-  getPhaseStartAction,
-  isMapPhase,
-  isAgentPhase,
-  getAvailableAssets
+  getPhaseStartAction
 } from '../utils/tournamentHelpers';
 
 export const useTournamentStore = create<TournamentStore>((set, get) => ({
@@ -90,7 +87,7 @@ export const useTournamentStore = create<TournamentStore>((set, get) => ({
       
       // Validate transition
       const maxCompleted = state.actionHistory.length;
-      const validation = validateTurnTransition(state.actionNumber, targetAction, maxCompleted);
+      const validation = validateTurnTransition(targetAction, maxCompleted);
       
       if (!validation.valid) {
         return { ...state, lastError: validation.error };
@@ -156,19 +153,18 @@ export const useTournamentStore = create<TournamentStore>((set, get) => ({
   // Asset selection action
   selectAsset: (assetName: string) => {
     set((state) => {
-      const currentAction = state.actionNumber;
       const currentPlayer = state.currentPlayer;
       
       if (!currentPlayer) {
         return { ...state, lastError: 'No active player for selection' };
       }
       
-      const actionType = getActionType(currentAction);
+      const actionType = getActionType(state.actionNumber);
       const timestamp = Date.now();
       
       // Create new action record
       const newAction: TournamentAction = {
-        actionNumber: currentAction,
+        actionNumber: state.actionNumber,
         player: currentPlayer,
         actionType,
         selection: assetName,
