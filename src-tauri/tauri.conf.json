@@ -12,9 +12,13 @@
   "app": {
     "windows": [
       {
-        "title": "new-admin-client",
-        "width": 800,
-        "height": 600
+        "title": "Valorant Tournament Admin",
+        "width": 1280,
+        "height": 720,
+        "minWidth": 1280,
+        "minHeight": 720,
+        "resizable": true,
+        "fullscreen": false
       }
     ],
     "security": {

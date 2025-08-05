@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Ensure proper window sizing and aspect ratio */
+/* Ensure proper window sizing */
 html, body {
   margin: 0;
   padding: 0;
@@ -9,26 +9,4 @@ html, body {
   min-height: 720px;
 }
 
-/* Tournament Admin Dashboard Layout */
-.tournament-dashboard {
-  width: 100vw;
-  height: 100vh;
-  min-width: 1280px;
-  min-height: 720px;
-  display: flex;
-  flex-direction: column;
-  background-color: #111827; /* gray-900 */
-}
 
-/* Maintain aspect ratio when resizing */
-@media (min-aspect-ratio: 16/9) {
-  .tournament-dashboard {
-    max-height: calc(100vw / 16 * 9);
-  }
-}
-
-@media (max-aspect-ratio: 16/9) {
-  .tournament-dashboard {
-    max-width: calc(100vh / 9 * 16);
-  }
-}
