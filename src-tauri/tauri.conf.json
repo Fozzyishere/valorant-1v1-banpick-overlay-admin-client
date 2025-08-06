@@ -18,12 +18,26 @@
         "minWidth": 1280,
         "minHeight": 720,
         "resizable": true,
-        "fullscreen": false
+        "fullscreen": false,
+        "label": "main"
+      },
+      {
+        "title": "OBS Overlay",
+        "width": 1920,
+        "height": 1080,
+        "resizable": false,
+        "fullscreen": false,
+        "decorations": false,
+        "alwaysOnTop": false,
+        "visible": false,
+        "label": "overlay",
+        "url": "/overlay.html"
       }
     ],
     "security": {
       "csp": null
-    }
+    },
+    "withGlobalTauri": true
   },
   "bundle": {
     "active": true,

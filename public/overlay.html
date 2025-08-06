@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Valorant Tournament Overlay</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            width: 1920px;
+            height: 1080px;
+            position: relative;
+            overflow: hidden;
+            background: transparent;
+            font-family: 'Arial', sans-serif;
+        }
+
+        .background-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .background-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        .overlay-content {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .team-names {
+            position: absolute;
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            justify-content: space-between;
+            width: 80%;
+            max-width: 1200px;
+        }
+
+        .team-name {
+            color: white;
+            font-size: 48px;
+            font-weight: bold;
+            text-shadow: 0 0 10px white, 0 0 20px white, 0 0 30px white;
+            text-align: center;
+        }
+
+        .team-name.player1 {
+            text-align: left;
+        }
+
+        .team-name.player2 {
+            text-align: right;
+        }
+
+        .phase-indicator {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 32px;
+            font-weight: bold;
+            text-shadow: 0 0 10px white;
+            text-align: center;
+        }
+
+        .hidden {
+            opacity: 0;
+        }
+
+        .visible {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="background-container">
+        <img id="phase-1-bg" class="background-image visible" src="/phase-1-map.png" alt="Map Phase Background" />
+        <img id="phase-2-bg" class="background-image hidden" src="/phase-2-agent.png" alt="Agent Phase Background" />
+        <img id="conclusion-bg" class="background-image hidden" src="/conclusion.png" alt="Conclusion Background" />
+    </div>
+
+    <div class="overlay-content">
+        <div class="team-names">
+            <div class="team-name player1" id="team1-name">Player 1</div>
+            <div class="team-name player2" id="team2-name">Player 2</div>
+        </div>
+        
+        <div class="phase-indicator" id="phase-indicator">
+            Map Ban Phase
+        </div>
+    </div>
+
+    <script>
+        // Tournament state management
+        let tournamentState = {
+            currentPhase: 'MAP_BAN',
+            teamNames: { P1: 'Player 1', P2: 'Player 2' },
+            actionNumber: 1
+        };
+
+        // Phase background mapping
+        const phaseBackgrounds = {
+            'MAP_BAN': 'phase-1-bg',
+            'MAP_PICK': 'phase-1-bg',
+            'AGENT_BAN': 'phase-2-bg',
+            'AGENT_PICK': 'phase-2-bg',
+            'CONCLUSION': 'conclusion-bg'
+        };
+
+        // Phase display text mapping
+        const phaseDisplayText = {
+            'MAP_BAN': 'Map Ban Phase',
+            'MAP_PICK': 'Map Pick Phase',
+            'AGENT_BAN': 'Agent Ban Phase',
+            'AGENT_PICK': 'Agent Pick Phase',
+            'CONCLUSION': 'Tournament Complete'
+        };
+
+        // Update background based on current phase
+        function updateBackground(phase) {
+            // Hide all backgrounds
+            document.querySelectorAll('.background-image').forEach(img => {
+                img.classList.remove('visible');
+                img.classList.add('hidden');
+            });
+
+            // Show current phase background
+            const activeBackground = phaseBackgrounds[phase];
+            if (activeBackground) {
+                const bgElement = document.getElementById(activeBackground);
+                if (bgElement) {
+                    bgElement.classList.remove('hidden');
+                    bgElement.classList.add('visible');
+                }
+            }
+
+            // Update phase indicator text
+            const phaseIndicator = document.getElementById('phase-indicator');
+            if (phaseIndicator) {
+                phaseIndicator.textContent = phaseDisplayText[phase] || 'Tournament Phase';
+            }
+        }
+
+        // Update team names
+        function updateTeamNames(teamNames) {
+            const team1Element = document.getElementById('team1-name');
+            const team2Element = document.getElementById('team2-name');
+
+            if (team1Element) {
+                team1Element.textContent = teamNames.P1 || 'Player 1';
+            }
+            if (team2Element) {
+                team2Element.textContent = teamNames.P2 || 'Player 2';
+            }
+        }
+
+        // Update tournament state
+        function updateTournamentState(newState) {
+            const previousPhase = tournamentState.currentPhase;
+            tournamentState = { ...tournamentState, ...newState };
+
+            // Update team names if changed
+            if (newState.teamNames) {
+                updateTeamNames(newState.teamNames);
+            }
+
+            // Update background if phase changed
+            if (newState.currentPhase && newState.currentPhase !== previousPhase) {
+                updateBackground(newState.currentPhase);
+            }
+        }
+
+        // Initialize overlay
+        function initialize() {
+            updateBackground(tournamentState.currentPhase);
+            updateTeamNames(tournamentState.teamNames);
+        }
+
+        // Tauri event listener setup (when available)
+        if (window.__TAURI__) {
+            window.__TAURI__.event.listen('tournament-update', (event) => {
+                updateTournamentState(event.payload);
+            });
+        }
+
+        // Web-based testing interface (for development)
+        window.updateOverlay = updateTournamentState;
+
+        // Initialize on load
+        window.addEventListener('load', initialize);
+
+        // Test function for development
+        window.testPhaseTransition = function() {
+            const phases = ['MAP_BAN', 'MAP_PICK', 'AGENT_BAN', 'AGENT_PICK', 'CONCLUSION'];
+            let currentIndex = 0;
+            
+            setInterval(() => {
+                updateTournamentState({ 
+                    currentPhase: phases[currentIndex % phases.length],
+                    teamNames: { P1: 'Team Alpha', P2: 'Team Bravo' }
+                });
+                currentIndex++;
+            }, 3000);
+        };
+    </script>
+</body>
+</html>

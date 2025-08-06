@@ -15,6 +15,29 @@ import {
   getPhaseStartAction
 } from '../utils/tournamentHelpers';
 
+// Tauri event emission for overlay updates
+const emitOverlayUpdate = async (state: any) => {
+  if (typeof window !== 'undefined' && window.__TAURI__) {
+    try {
+      await window.__TAURI__.event.emit('tournament-update', {
+        currentPhase: state.currentPhase,
+        currentPlayer: state.currentPlayer,
+        actionNumber: state.actionNumber,
+        teamNames: state.teamNames,
+        mapsBanned: state.mapsBanned,
+        mapsPicked: state.mapsPicked,
+        deciderMap: state.deciderMap,
+        agentsBanned: state.agentsBanned,
+        agentPicks: state.agentPicks,
+        timerState: state.timerState,
+        timerSeconds: state.timerSeconds
+      });
+    } catch (error) {
+      console.error('Error emitting overlay update:', error);
+    }
+  }
+};
+
 export const useTournamentStore = create<TournamentStore>((set, get) => ({
   // Initial tournament state
   currentPhase: 'MAP_BAN',
@@ -61,13 +84,18 @@ export const useTournamentStore = create<TournamentStore>((set, get) => ({
   },
 
   setPlayerName: (player: Player, name: string) => {
-    set((state) => ({
-      teamNames: {
-        ...state.teamNames,
-        [player]: name.trim() || `Player ${player.slice(1)}`
-      },
-      lastError: null
-    }));
+    set((state) => {
+      const newState = {
+        ...state,
+        teamNames: {
+          ...state.teamNames,
+          [player]: name.trim() || `Player ${player.slice(1)}`
+        },
+        lastError: null
+      };
+      emitOverlayUpdate(newState);
+      return newState;
+    });
   },
 
   // Turn control actions
@@ -97,13 +125,16 @@ export const useTournamentStore = create<TournamentStore>((set, get) => ({
       const newCurrentPlayer = calculateCurrentPlayer(targetAction, state.firstPlayer);
       const newPhase = getCurrentPhase(targetAction);
       
-      return {
+      const newState = {
         ...state,
         actionNumber: targetAction,
         currentPlayer: newCurrentPlayer,
         currentPhase: newPhase,
         lastError: null
       };
+      
+      emitOverlayUpdate(newState);
+      return newState;
     });
   },
 
@@ -217,6 +248,7 @@ export const useTournamentStore = create<TournamentStore>((set, get) => ({
       newState.actionHistory = [...state.actionHistory, newAction];
       newState.lastError = null;
       
+      emitOverlayUpdate(newState);
       return newState;
     });
   },
