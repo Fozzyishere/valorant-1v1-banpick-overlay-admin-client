@@ -8,6 +8,7 @@ export function TurnControlPanel() {
     actionNumber,
     setFirstPlayer,
     setPlayerName,
+    startEvent,
     nextTurn,
     prevTurn,
     resetTurn,
@@ -85,36 +86,58 @@ export function TurnControlPanel() {
         <div className="text-white font-medium">{turnInfo.description}</div>
       </div>
       
-      {/* Turn Navigation */}
-      <div className="space-y-2">
-        <button
-          onClick={nextTurn}
-          className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-medium transition-colors"
-        >
-          NEXT TURN
-        </button>
+      {/* Event Control */}
+      <div className="space-y-3">
+        <div>
+          <label className="text-sm text-gray-400 mb-2 block">Event Control:</label>
+          <button
+            onClick={startEvent}
+            className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded font-medium transition-colors"
+          >
+            START EVENT
+          </button>
+        </div>
         
-        <button
-          onClick={prevTurn}
-          disabled={actionNumber === 1}
-          className="w-full px-4 py-2 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded font-medium transition-colors"
-        >
-          PREV TURN
-        </button>
+        {/* Turn Navigation */}
+        <div>
+          <label className="text-sm text-gray-400 mb-2 block">Turn Navigation:</label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={prevTurn}
+              disabled={actionNumber === 1}
+              className="px-3 py-2 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded text-sm font-medium transition-colors"
+            >
+              PREV
+            </button>
+            
+            <button
+              onClick={nextTurn}
+              className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors"
+            >
+              NEXT
+            </button>
+          </div>
+        </div>
         
-        <button
-          onClick={resetTurn}
-          className="w-full px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded font-medium transition-colors"
-        >
-          RESET TURN
-        </button>
-        
-        <button
-          onClick={resetTournament}
-          className="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded font-medium transition-colors"
-        >
-          RESET TOURNAMENT
-        </button>
+        {/* Reset Controls */}
+        <div>
+          <label className="text-sm text-gray-400 mb-2 block">Reset Options:</label>
+          <div className="space-y-2">
+            <button
+              onClick={resetTurn}
+              className="w-full px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded text-sm font-medium transition-colors"
+            >
+              RESET TURN
+            </button>
+            
+            <button
+              onClick={resetTournament}
+              className="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-sm font-medium transition-colors"
+            >
+              RESET TOURNAMENT
+            </button>
+          </div>
+        </div>
       </div>
       
       {/* Error Display */}

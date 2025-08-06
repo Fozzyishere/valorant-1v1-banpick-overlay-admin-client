@@ -78,6 +78,7 @@ export interface TournamentActions {
   setPlayerName: (player: Player, name: string) => void;
   
   // Turn control
+  startEvent: () => void;
   nextTurn: () => void;
   prevTurn: () => void;
   resetTurn: () => void;

@@ -161,6 +161,33 @@ export const useTournamentStore = create<TournamentStore>((set, get) => ({
     });
   },
 
+  startEvent: () => {
+    set((state) => {
+      // Initialize tournament to action 1 with selected first player
+      const newCurrentPlayer = calculateCurrentPlayer(1, state.firstPlayer);
+      const newPhase = getCurrentPhase(1);
+      
+      const newState = {
+        ...state,
+        actionNumber: 1,
+        currentPlayer: newCurrentPlayer,
+        currentPhase: newPhase,
+        // Clear all tournament data
+        mapsBanned: [],
+        mapsPicked: [],
+        deciderMap: null,
+        agentsBanned: [],
+        agentPicks: { P1: null, P2: null },
+        actionHistory: [],
+        // Keep team setup configuration
+        lastError: null
+      };
+      
+      emitOverlayUpdate(newState);
+      return newState;
+    });
+  },
+
   resetTurn: () => {
     set((state) => {
       const phaseStartAction = getPhaseStartAction(state.actionNumber);
