@@ -15,14 +15,8 @@ export function HeaderBar() {
           const overlay = new WebviewWindow('obs-overlay', {
             url: '/overlay.html',
             title: 'OBS Overlay',
-            width: 1920,
-            height: 1080,
-            resizable: false,
-            decorations: true,
-            alwaysOnTop: false,
-            transparent: false,
-            skipTaskbar: false,
-            shadow: false
+            minWidth: 1920,
+            minHeight: 1080,
           });
 
           // Listen for overlay window events
@@ -34,12 +28,31 @@ export function HeaderBar() {
           overlay.once('tauri://error', (e) => {
             console.error('Error creating overlay window:', e);
           });
+
+          // Listen for window close to reset state
+          overlay.once('tauri://close-requested', () => {
+            console.log('Overlay window closed');
+            setOverlayCreated(false);
+          });
         } else {
-          // Show existing overlay window
-          const overlay = WebviewWindow.getByLabel('obs-overlay');
-          if (overlay) {
-            await overlay.show();
-            await overlay.setFocus();
+          // Try to show existing overlay window
+          try {
+            const overlay = await WebviewWindow.getByLabel('obs-overlay');
+            if (overlay) {
+              await overlay.show();
+              await overlay.setFocus();
+            } else {
+              // Window no longer exists, reset state and create new one
+              console.log('Overlay window no longer exists, creating new one');
+              setOverlayCreated(false);
+              // Recursively call to create new window
+              showOverlay();
+            }
+          } catch (error) {
+            // Window was closed, reset state and create new one
+            console.log('Error showing overlay, creating new one:', error);
+            setOverlayCreated(false);
+            showOverlay();
           }
         }
       } catch (error) {
