@@ -7,7 +7,9 @@ export function PreviewPanel() {
     mapsPicked,
     deciderMap,
     agentsBanned,
-    agentPicks
+    agentPicks,
+    revealedActions,
+    actionNumber
   } = useTournamentStore();
 
   const PlayerSection = ({ player, title }: { player: 'P1' | 'P2', title: string }) => {
@@ -16,29 +18,36 @@ export function PreviewPanel() {
     const playerAgentBans = agentsBanned.filter(ban => ban.player === player);
     const playerAgentPick = agentPicks[player];
 
-    const SlotDisplay = ({ items, maxCount, label }: { items: string[], maxCount: number, label: string }) => (
-      <div className="mb-3">
-        <div className="text-xs text-gray-400 mb-1">{label}:</div>
-        <div className="flex space-x-1">
-          {Array.from({ length: maxCount }, (_, index) => (
-            <div
-              key={index}
-              className={`w-12 h-8 border rounded text-xs flex items-center justify-center ${
-                items[index]
-                  ? 'bg-blue-900/30 border-blue-600 text-blue-300'
-                  : 'bg-gray-700 border-gray-600 text-gray-500'
-              }`}
-            >
-              {items[index] ? items[index].slice(0, 4) : '---'}
-            </div>
-          ))}
+    const SlotDisplay = ({ items, maxCount, label }: { items: string[]; maxCount: number; label: string }) => {
+      return (
+        <div className="mb-3">
+          <div className="text-xs text-tokyo-text-dim mb-1">{label}:</div>
+          <div className="flex flex-wrap gap-1">
+            {Array.from({ length: maxCount }, (_, index) => {
+              const value = items[index];
+              const isFilled = Boolean(value);
+              const colorClasses = isFilled
+                ? (revealedActions.has(actionNumber)
+                    ? 'bg-tokyo-teal/20 border-tokyo-teal text-tokyo-teal'
+                    : 'bg-tokyo-yellow/20 border-tokyo-yellow text-tokyo-yellow')
+                : 'bg-tokyo-surface-light border-tokyo-border-light text-tokyo-text-dim';
+              return (
+                <div
+                  key={index}
+                  className={`px-2 py-1 border rounded text-xs whitespace-nowrap ${colorClasses}`}
+                >
+                  {isFilled ? value : '---'}
+                </div>
+              );
+            })}
+          </div>
         </div>
-      </div>
-    );
+      );
+    };
 
     return (
-      <div className="bg-gray-700 rounded p-3 mb-3">
-        <h4 className="font-medium text-white mb-3">{title}</h4>
+      <div className="bg-tokyo-surface-light rounded p-3 mb-3">
+        <h4 className="font-medium text-tokyo-text mb-3">{title}</h4>
         
         {/* Map Bans */}
         <SlotDisplay 
@@ -57,15 +66,15 @@ export function PreviewPanel() {
         {/* Decider (only show for P1 or when selected) */}
         {(player === 'P1' || deciderMap) && (
           <div className="mb-3">
-            <div className="text-xs text-gray-400 mb-1">Decider:</div>
+            <div className="text-xs text-tokyo-text-dim mb-1">Decider:</div>
             <div
-              className={`w-12 h-8 border rounded text-xs flex items-center justify-center ${
+              className={`px-2 py-1 border rounded text-xs inline-flex items-center justify-center whitespace-nowrap ${
                 deciderMap
-                  ? 'bg-green-900/30 border-green-600 text-green-300'
-                  : 'bg-gray-700 border-gray-600 text-gray-500'
+                  ? 'bg-tokyo-teal/20 border-tokyo-teal text-tokyo-teal'
+                  : 'bg-tokyo-surface-light border-tokyo-border-light text-tokyo-text-dim'
               }`}
             >
-              {deciderMap ? deciderMap.slice(0, 4) : '---'}
+              {deciderMap ? deciderMap : '---'}
             </div>
           </div>
         )}
@@ -79,15 +88,15 @@ export function PreviewPanel() {
         
         {/* Agent Pick */}
         <div className="mb-3">
-          <div className="text-xs text-gray-400 mb-1">Agent Pick:</div>
+          <div className="text-xs text-tokyo-text-dim mb-1">Agent Pick:</div>
           <div
-            className={`w-12 h-8 border rounded text-xs flex items-center justify-center ${
+            className={`px-2 py-1 border rounded text-xs inline-flex items-center justify-center whitespace-nowrap ${
               playerAgentPick
-                ? 'bg-purple-900/30 border-purple-600 text-purple-300'
-                : 'bg-gray-700 border-gray-600 text-gray-500'
+                ? 'bg-tokyo-purple/20 border-tokyo-purple text-tokyo-purple'
+                : 'bg-tokyo-surface-light border-tokyo-border-light text-tokyo-text-dim'
             }`}
           >
-            {playerAgentPick ? playerAgentPick.slice(0, 4) : '---'}
+            {playerAgentPick ? playerAgentPick : '---'}
           </div>
         </div>
       </div>
@@ -96,7 +105,7 @@ export function PreviewPanel() {
 
   return (
     <div className="flex flex-col space-y-4 h-full">
-      <h2 className="text-lg font-semibold text-white">Tournament Preview</h2>
+      <h2 className="text-lg font-semibold text-tokyo-text tracking-tight">Tournament Preview</h2>
       
       <div className="flex-1 overflow-y-auto space-y-4">
         <PlayerSection player="P1" title={teamNames.P1} />
@@ -104,8 +113,8 @@ export function PreviewPanel() {
       </div>
       
       {/* Tournament Progress */}
-      <div className="mt-auto pt-4 border-t border-gray-700">
-        <div className="text-xs text-gray-400">
+      <div className="mt-auto pt-4 border-t border-tokyo-border">
+        <div className="text-xs text-tokyo-text-dim">
           Maps Banned: {mapsBanned.length}/6 | 
           Maps Picked: {mapsPicked.length}/2 | 
           Agents Banned: {agentsBanned.length}/6 | 

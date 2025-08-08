@@ -46,31 +46,140 @@
             pointer-events: none;
         }
 
-        .team-names {
-            position: absolute;
-            top: 50px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            justify-content: space-between;
-            width: 80%;
-            max-width: 1200px;
-        }
-
         .team-name {
+            position: absolute;
             color: white;
             font-size: 48px;
             font-weight: bold;
-            text-shadow: 0 0 10px white, 0 0 20px white, 0 0 30px white;
-            text-align: center;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.8), 
+                         0 0 20px rgba(255, 255, 255, 0.6), 
+                         0 0 30px rgba(255, 255, 255, 0.4),
+                         2px 2px 4px rgba(0, 0, 0, 0.8);
+            transition: all 0.3s ease-in-out;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
         }
 
         .team-name.player1 {
             text-align: left;
+            animation: slide-in-left 0.8s ease-out;
         }
 
         .team-name.player2 {
             text-align: right;
+            animation: slide-in-right 0.8s ease-out;
+        }
+
+        .team-name:hover {
+            transform: scale(1.02);
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.9), 
+                         0 0 25px rgba(255, 255, 255, 0.7), 
+                         0 0 35px rgba(255, 255, 255, 0.5),
+                         2px 2px 6px rgba(0, 0, 0, 0.9);
+        }
+
+        @keyframes slide-in-left {
+            0% {
+                transform: translateX(-50px);
+                opacity: 0;
+            }
+            100% {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slide-in-right {
+            0% {
+                transform: translateX(50px);
+                opacity: 0;
+            }
+            100% {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .asset-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 3;
+            pointer-events: none;
+        }
+
+        .positioned-asset {
+            position: absolute;
+            transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            max-width: 120px;
+            max-height: 120px;
+            object-fit: contain;
+            transform-origin: center;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+        }
+
+        .positioned-asset.hidden {
+            opacity: 0;
+            transform: scale(0.8) translateY(20px);
+        }
+
+        .positioned-asset.revealed {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+        }
+
+        .positioned-asset:hover {
+            transform: scale(1.05) translateY(-2px);
+            filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.4));
+        }
+
+        .positioned-asset.agent-banner {
+            max-width: 200px;
+            max-height: 150px;
+            border-radius: 12px;
+        }
+
+        .positioned-asset.map {
+            border-radius: 8px;
+        }
+
+        .positioned-asset.agent-icon {
+            border-radius: 50%;
+        }
+
+        .positioned-asset.fallback {
+            border: 2px solid #ff6b6b;
+            background: rgba(200, 200, 200, 0.3);
+            backdrop-filter: blur(2px);
+            font-family: 'Arial', sans-serif;
+            border-radius: 8px;
+            animation: pulse-error 2s infinite;
+        }
+
+        .positioned-asset.fallback:hover {
+            background: rgba(255, 107, 107, 0.2);
+            animation: pulse-error-fast 1s infinite;
+        }
+
+        @keyframes pulse-error {
+            0%, 100% {
+                border-color: #ff6b6b;
+                background: rgba(200, 200, 200, 0.3);
+            }
+            50% {
+                border-color: #ff9999;
+                background: rgba(255, 107, 107, 0.2);
+            }
+        }
+
+        @keyframes pulse-error-fast {
+            0%, 100% {
+                border-color: #ff6b6b;
+            }
+            50% {
+                border-color: #ffcccc;
+            }
         }
 
         .phase-indicator {
@@ -81,8 +190,68 @@
             color: white;
             font-size: 32px;
             font-weight: bold;
-            text-shadow: 0 0 10px white;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.8),
+                         0 0 20px rgba(255, 255, 255, 0.6),
+                         2px 2px 4px rgba(0, 0, 0, 0.8);
             text-align: center;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 12px 24px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease-in-out;
+            animation: phase-fade-in 0.6s ease-out;
+        }
+
+        .phase-indicator:hover {
+            background: rgba(0, 0, 0, 0.5);
+            border-color: rgba(255, 255, 255, 0.4);
+            transform: translateX(-50%) scale(1.02);
+        }
+
+        @keyframes phase-fade-in {
+            0% {
+                opacity: 0;
+                transform: translateX(-50%) translateY(20px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+
+        @keyframes asset-reveal-sparkle {
+            0% {
+                opacity: 0;
+                transform: scale(0.5) rotate(-180deg);
+                filter: brightness(2) saturate(1.5) drop-shadow(0 0 20px rgba(255, 255, 255, 0.8));
+            }
+            50% {
+                transform: scale(1.1) rotate(0deg);
+                filter: brightness(1.5) saturate(1.2) drop-shadow(0 0 15px rgba(255, 255, 255, 0.6));
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) rotate(0deg);
+                filter: brightness(1) saturate(1) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+            }
+        }
+
+        /* Global reveal animation for smooth transitions */
+        @keyframes global-reveal {
+            0% {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        /* Phase transition overlay effect */
+        .phase-transition {
+            animation: global-reveal 1s ease-out;
         }
 
         .hidden {
@@ -102,14 +271,16 @@
     </div>
 
     <div class="overlay-content">
-        <div class="team-names">
-            <div class="team-name player1" id="team1-name">Player 1</div>
-            <div class="team-name player2" id="team2-name">Player 2</div>
-        </div>
+        <div class="team-name player1" id="team1-name">Player 1</div>
+        <div class="team-name player2" id="team2-name">Player 2</div>
         
         <div class="phase-indicator" id="phase-indicator">
             Map Ban Phase
         </div>
+    </div>
+
+    <div class="asset-container" id="asset-container">
+        <!-- Tournament assets will be positioned here dynamically -->
     </div>
 
     <script>
@@ -117,7 +288,104 @@
         let tournamentState = {
             currentPhase: 'MAP_BAN',
             teamNames: { P1: 'Player 1', P2: 'Player 2' },
-            actionNumber: 1
+            actionNumber: 1,
+            mapsBanned: { P1: [], P2: [] },
+            mapsPicked: { P1: null, P2: null },
+            deciderMap: null,
+            agentsBanned: { P1: [], P2: [] },
+            agentPicks: { P1: null, P2: null },
+            timerState: 'ready',
+            timerSeconds: 30
+        };
+
+        // Asset reveal state tracking
+        let pendingAssets = new Set(); // Assets selected but not yet revealed
+        let revealedAssets = new Set(); // Assets that are visible on overlay
+        let failedAssets = new Set(); // Assets that failed to load
+        let retryAttempts = new Map(); // Track retry attempts for failed assets
+
+        // Error handling configuration
+        const MAX_RETRY_ATTEMPTS = 3;
+        const RETRY_DELAY = 2000; // 2 seconds
+
+        // Asset positioning coordinates
+        const PHASE1_COORDINATES = {
+            teamNames: {
+                p1: { x: 332, y: 156 },
+                p2: { x: 1582, y: 156 }
+            },
+            p1MapBans: [
+                { x: 229, y: 325 },
+                { x: 384, y: 325 },
+                { x: 538, y: 325 }
+            ],
+            p2MapBans: [
+                { x: 1546, y: 325 },
+                { x: 1392, y: 325 },
+                { x: 1237, y: 325 }
+            ],
+            mapPicks: {
+                p1: { x: 734, y: 325 },
+                p2: { x: 1043, y: 325 },
+                decider: { x: 888, y: 325 }
+            }
+        };
+
+        const PHASE2_COORDINATES = {
+            teamNames: {
+                p1: { x: 332, y: 156 },
+                p2: { x: 1582, y: 156 }
+            },
+            p1AgentBans: [
+                { x: 229, y: 313 },
+                { x: 335, y: 313 },
+                { x: 441, y: 313 }
+            ],
+            p2AgentBans: [
+                { x: 1596, y: 313 },
+                { x: 1490, y: 313 },
+                { x: 1384, y: 313 }
+            ],
+            agentPicks: {
+                p1: { x: 211, y: 436 },
+                p2: { x: 1485, y: 436 }
+            }
+        };
+
+        const CONCLUSION_COORDINATES = {
+            teamNames: {
+                p1: { x: 332, y: 156 },
+                p2: { x: 1582, y: 156 }
+            },
+            p1MapBans: [
+                { x: 229, y: 313 },
+                { x: 384, y: 313 },
+                { x: 538, y: 313 }
+            ],
+            p2MapBans: [
+                { x: 1546, y: 313 },
+                { x: 1392, y: 313 },
+                { x: 1237, y: 313 }
+            ],
+            mapPicks: {
+                p1: { x: 604, y: 479 },
+                p2: { x: 1009, y: 479 },
+                decider: { x: 604, y: 682 }
+            },
+            p1AgentBans: [
+                { x: 621, y: 909 },
+                { x: 727, y: 909 },
+                { x: 833, y: 909 }
+            ],
+            p2AgentBans: [
+                { x: 1215, y: 909 },
+                { x: 1109, y: 909 },
+                { x: 1003, y: 909 }
+            ],
+            agentPicks: {
+                p1: { x: 211, y: 436 },
+                p2: { x: 1366, y: 436 }
+            }
         };
 
         // Phase background mapping
@@ -163,8 +431,8 @@
             }
         }
 
-        // Update team names
-        function updateTeamNames(teamNames) {
+        // Update team names with positioning
+        function updateTeamNames(teamNames, currentPhase) {
             const team1Element = document.getElementById('team1-name');
             const team2Element = document.getElementById('team2-name');
 
@@ -174,28 +442,496 @@
             if (team2Element) {
                 team2Element.textContent = teamNames.P2 || 'Player 2';
             }
+
+            // Position team names based on current phase
+            positionTeamNames(currentPhase);
+        }
+
+        // Position team names based on current phase coordinates
+        function positionTeamNames(currentPhase) {
+            const team1Element = document.getElementById('team1-name');
+            const team2Element = document.getElementById('team2-name');
+
+            let coords;
+            if (currentPhase === 'CONCLUSION') {
+                coords = CONCLUSION_COORDINATES.teamNames;
+            } else if (currentPhase === 'AGENT_BAN' || currentPhase === 'AGENT_PICK') {
+                coords = PHASE2_COORDINATES.teamNames;
+            } else {
+                coords = PHASE1_COORDINATES.teamNames;
+            }
+
+            if (team1Element && coords.p1) {
+                team1Element.style.left = `${coords.p1.x}px`;
+                team1Element.style.top = `${coords.p1.y}px`;
+            }
+            if (team2Element && coords.p2) {
+                team2Element.style.left = `${coords.p2.x}px`;
+                team2Element.style.top = `${coords.p2.y}px`;
+            }
+        }
+
+        // Generate asset file path
+        function getAssetFilePath(assetName, assetType) {
+            const assetFolders = {
+                'map': 'maps',
+                'agent-icon': 'agents-icon',
+                'agent-banner': 'agent-banner'
+            };
+            return `/img/${assetFolders[assetType]}/${assetName}.png`;
+        }
+
+        // Create fallback element for failed assets
+        function createFallbackElement(asset) {
+            const fallback = document.createElement('div');
+            fallback.id = asset.id;
+            fallback.className = `positioned-asset fallback ${asset.type} ${asset.revealed ? 'revealed' : 'hidden'}`;
+            fallback.style.left = `${asset.position.x}px`;
+            fallback.style.top = `${asset.position.y}px`;
+            fallback.style.width = asset.type === 'agent-banner' ? '200px' : '120px';
+            fallback.style.height = asset.type === 'agent-banner' ? '150px' : '120px';
+            fallback.style.backgroundColor = 'rgba(200, 200, 200, 0.3)';
+            fallback.style.border = '2px solid #ff6b6b';
+            fallback.style.borderRadius = '8px';
+            fallback.style.display = 'flex';
+            fallback.style.alignItems = 'center';
+            fallback.style.justifyContent = 'center';
+            fallback.style.color = 'white';
+            fallback.style.fontSize = '12px';
+            fallback.style.fontWeight = 'bold';
+            fallback.style.textAlign = 'center';
+            fallback.style.textShadow = '1px 1px 2px rgba(0,0,0,0.8)';
+            fallback.innerHTML = `<div>${asset.asset}<br><small>Asset Missing</small></div>`;
+            
+            return fallback;
+        }
+
+        // Retry asset loading
+        function retryAssetLoad(asset, attempt = 1) {
+            return new Promise((resolve, reject) => {
+                setTimeout(() => {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.onerror = () => {
+                        if (attempt < MAX_RETRY_ATTEMPTS) {
+                            console.log(`Retry attempt ${attempt + 1} for asset: ${asset.asset}`);
+                            retryAssetLoad(asset, attempt + 1).then(resolve).catch(reject);
+                        } else {
+                            reject(new Error(`Failed to load asset after ${MAX_RETRY_ATTEMPTS} attempts`));
+                        }
+                    };
+                    img.src = getAssetFilePath(asset.asset, asset.type);
+                }, RETRY_DELAY);
+            });
+        }
+
+        // Create positioned asset element with enhanced error handling
+        function createAssetElement(asset) {
+            // Check if this asset has already failed permanently
+            if (failedAssets.has(asset.id)) {
+                return createFallbackElement(asset);
+            }
+
+            const img = document.createElement('img');
+            img.id = asset.id;
+            img.className = `positioned-asset ${asset.type} ${asset.revealed ? 'revealed' : 'hidden'}`;
+            img.src = getAssetFilePath(asset.asset, asset.type);
+            img.style.left = `${asset.position.x}px`;
+            img.style.top = `${asset.position.y}px`;
+            img.alt = `${asset.player} ${asset.slot} - ${asset.asset}`;
+            
+            // Enhanced error handling with retry logic
+            img.onerror = function() {
+                console.warn(`Failed to load asset: ${img.src}`);
+                
+                const currentAttempts = retryAttempts.get(asset.id) || 0;
+                
+                if (currentAttempts < MAX_RETRY_ATTEMPTS) {
+                    retryAttempts.set(asset.id, currentAttempts + 1);
+                    console.log(`Attempting to retry loading asset: ${asset.asset} (attempt ${currentAttempts + 1})`);
+                    
+                    // Attempt retry
+                    retryAssetLoad(asset, currentAttempts + 1)
+                        .then((successImg) => {
+                            // Replace failed image with successfully loaded one
+                            img.src = successImg.src;
+                            retryAttempts.delete(asset.id);
+                            console.log(`Successfully loaded asset on retry: ${asset.asset}`);
+                        })
+                        .catch(() => {
+                            // Final failure - mark as permanently failed
+                            failedAssets.add(asset.id);
+                            retryAttempts.delete(asset.id);
+                            
+                            // Replace with fallback element
+                            const fallback = createFallbackElement(asset);
+                            img.parentNode?.replaceChild(fallback, img);
+                            
+                            console.error(`Permanently failed to load asset: ${asset.asset}`);
+                        });
+                } else {
+                    // Already at max attempts, create fallback immediately
+                    failedAssets.add(asset.id);
+                    
+                    const fallback = createFallbackElement(asset);
+                    img.parentNode?.replaceChild(fallback, img);
+                }
+            };
+            
+            // Add successful load handler
+            img.onload = function() {
+                // Clear any previous failure state
+                failedAssets.delete(asset.id);
+                retryAttempts.delete(asset.id);
+            };
+            
+            return img;
+        }
+
+        // Calculate positioned assets for current tournament state with timing flow
+        function calculatePositionedAssets(state) {
+            const assets = [];
+            const { currentPhase, mapsBanned, mapsPicked, deciderMap, agentsBanned, agentPicks, timerState } = state;
+
+            // Determine if we should reveal assets (explicit: only on finished or in conclusion)
+            const shouldRevealAssets = timerState === 'finished' || currentPhase === 'CONCLUSION';
+
+            // Phase 1 and Conclusion: Map assets
+            if (currentPhase === 'MAP_BAN' || currentPhase === 'MAP_PICK' || currentPhase === 'CONCLUSION') {
+                const coords = currentPhase === 'CONCLUSION' ? CONCLUSION_COORDINATES : PHASE1_COORDINATES;
+
+                // P1 Map Bans
+                if (mapsBanned?.P1) {
+                    mapsBanned.P1.forEach((map, index) => {
+                        if (map && coords.p1MapBans[index]) {
+                            const assetId = `p1-map-ban-${index + 1}`;
+                            const isRevealed = shouldRevealAssets || revealedAssets.has(assetId);
+                            
+                            assets.push({
+                                id: assetId,
+                                type: 'map',
+                                asset: map,
+                                position: coords.p1MapBans[index],
+                                revealed: isRevealed,
+                                player: 'P1',
+                                slot: `ban${index + 1}`
+                            });
+                            
+                            if (isRevealed) revealedAssets.add(assetId);
+                        }
+                    });
+                }
+
+                // P2 Map Bans
+                if (mapsBanned?.P2) {
+                    mapsBanned.P2.forEach((map, index) => {
+                        if (map && coords.p2MapBans[index]) {
+                            const assetId = `p2-map-ban-${index + 1}`;
+                            const isRevealed = shouldRevealAssets || revealedAssets.has(assetId);
+                            assets.push({
+                                id: assetId,
+                                type: 'map',
+                                asset: map,
+                                position: coords.p2MapBans[index],
+                                revealed: isRevealed,
+                                player: 'P2',
+                                slot: `ban${index + 1}`
+                            });
+                            if (isRevealed) revealedAssets.add(assetId);
+                        }
+                    });
+                }
+
+                // P1 Map Pick
+                if (mapsPicked?.P1 && coords.mapPicks.p1) {
+                    const assetId = 'p1-map-pick';
+                    const isRevealed = shouldRevealAssets || revealedAssets.has(assetId);
+                    assets.push({
+                        id: assetId,
+                        type: 'map',
+                        asset: mapsPicked.P1,
+                        position: coords.mapPicks.p1,
+                        revealed: isRevealed,
+                        player: 'P1',
+                        slot: 'pick'
+                    });
+                    if (isRevealed) revealedAssets.add(assetId);
+                }
+
+                // P2 Map Pick
+                if (mapsPicked?.P2 && coords.mapPicks.p2) {
+                    const assetId = 'p2-map-pick';
+                    const isRevealed = shouldRevealAssets || revealedAssets.has(assetId);
+                    assets.push({
+                        id: assetId,
+                        type: 'map',
+                        asset: mapsPicked.P2,
+                        position: coords.mapPicks.p2,
+                        revealed: isRevealed,
+                        player: 'P2',
+                        slot: 'pick'
+                    });
+                    if (isRevealed) revealedAssets.add(assetId);
+                }
+
+                // Decider Map
+                if (deciderMap && coords.mapPicks.decider) {
+                    const assetId = 'decider-map';
+                    const isRevealed = shouldRevealAssets || revealedAssets.has(assetId);
+                    assets.push({
+                        id: assetId,
+                        type: 'map',
+                        asset: deciderMap,
+                        position: coords.mapPicks.decider,
+                        revealed: isRevealed,
+                        player: 'shared',
+                        slot: 'decider'
+                    });
+                    if (isRevealed) revealedAssets.add(assetId);
+                }
+            }
+
+            // Phase 2 and Conclusion: Agent assets
+            if (currentPhase === 'AGENT_BAN' || currentPhase === 'AGENT_PICK' || currentPhase === 'CONCLUSION') {
+                const coords = currentPhase === 'CONCLUSION' ? CONCLUSION_COORDINATES : PHASE2_COORDINATES;
+
+                // P1 Agent Bans
+                if (agentsBanned?.P1) {
+                    agentsBanned.P1.forEach((agent, index) => {
+                        if (agent && coords.p1AgentBans[index]) {
+                            const assetId = `p1-agent-ban-${index + 1}`;
+                            const isRevealed = shouldRevealAssets || revealedAssets.has(assetId);
+                            assets.push({
+                                id: assetId,
+                                type: 'agent-icon',
+                                asset: agent,
+                                position: coords.p1AgentBans[index],
+                                revealed: isRevealed,
+                                player: 'P1',
+                                slot: `ban${index + 1}`
+                            });
+                            if (isRevealed) revealedAssets.add(assetId);
+                        }
+                    });
+                }
+
+                // P2 Agent Bans
+                if (agentsBanned?.P2) {
+                    agentsBanned.P2.forEach((agent, index) => {
+                        if (agent && coords.p2AgentBans[index]) {
+                            const assetId = `p2-agent-ban-${index + 1}`;
+                            const isRevealed = shouldRevealAssets || revealedAssets.has(assetId);
+                            assets.push({
+                                id: assetId,
+                                type: 'agent-icon',
+                                asset: agent,
+                                position: coords.p2AgentBans[index],
+                                revealed: isRevealed,
+                                player: 'P2',
+                                slot: `ban${index + 1}`
+                            });
+                            if (isRevealed) revealedAssets.add(assetId);
+                        }
+                    });
+                }
+
+                // P1 Agent Pick
+                if (agentPicks?.P1 && coords.agentPicks.p1) {
+                    const assetId = 'p1-agent-pick';
+                    const isRevealed = shouldRevealAssets || revealedAssets.has(assetId);
+                    assets.push({
+                        id: assetId,
+                        type: 'agent-banner',
+                        asset: agentPicks.P1,
+                        position: coords.agentPicks.p1,
+                        revealed: isRevealed,
+                        player: 'P1',
+                        slot: 'pick'
+                    });
+                    if (isRevealed) revealedAssets.add(assetId);
+                }
+
+                // P2 Agent Pick
+                if (agentPicks?.P2 && coords.agentPicks.p2) {
+                    const assetId = 'p2-agent-pick';
+                    const isRevealed = shouldRevealAssets || revealedAssets.has(assetId);
+                    assets.push({
+                        id: assetId,
+                        type: 'agent-banner',
+                        asset: agentPicks.P2,
+                        position: coords.agentPicks.p2,
+                        revealed: isRevealed,
+                        player: 'P2',
+                        slot: 'pick'
+                    });
+                    if (isRevealed) revealedAssets.add(assetId);
+                }
+            }
+
+            return assets;
+        }
+
+        // Manual asset reveal function with staggered animation
+        function revealPendingAssets(staggered = true) {
+            const currentAssets = calculatePositionedAssets(tournamentState);
+            const unrevealed = currentAssets.filter(asset => !revealedAssets.has(asset.id));
+            
+            if (!staggered || unrevealed.length <= 1) {
+                // Reveal all at once
+                currentAssets.forEach(asset => {
+                    revealedAssets.add(asset.id);
+                });
+                updateAssetPositions(tournamentState);
+            } else {
+                // Staggered reveal animation
+                unrevealed.forEach((asset, index) => {
+                    setTimeout(() => {
+                        revealedAssets.add(asset.id);
+                        
+                        // Update just this asset with animation
+                        const assetElement = document.getElementById(asset.id);
+                        if (assetElement) {
+                            assetElement.style.animationDelay = '0s';
+                            assetElement.classList.remove('hidden');
+                            assetElement.classList.add('revealed');
+                            
+                            // Add a sparkle effect
+                            assetElement.style.animation = 'asset-reveal-sparkle 0.6s ease-out';
+                        }
+                        
+                        // Update full display on last item
+                        if (index === unrevealed.length - 1) {
+                            setTimeout(() => updateAssetPositions(tournamentState), 100);
+                        }
+                    }, index * 200); // 200ms delay between each asset
+                });
+            }
+        }
+
+        // Reset asset reveal state for new phases
+        function resetAssetRevealState() {
+            pendingAssets.clear();
+            // Keep previously revealed assets for conclusion phase
+            if (tournamentState.currentPhase !== 'CONCLUSION') {
+                revealedAssets.clear();
+            }
+        }
+
+        // Error recovery functions
+        function clearFailedAssets() {
+            failedAssets.clear();
+            retryAttempts.clear();
+            console.log('Cleared all failed asset states');
+        }
+
+        function retryFailedAssets() {
+            const failedIds = Array.from(failedAssets);
+            failedAssets.clear();
+            retryAttempts.clear();
+            
+            console.log(`Attempting to retry ${failedIds.length} failed assets`);
+            updateAssetPositions(tournamentState);
+        }
+
+        // Diagnostic functions
+        function getAssetDiagnostics() {
+            return {
+                pendingAssets: Array.from(pendingAssets),
+                revealedAssets: Array.from(revealedAssets),
+                failedAssets: Array.from(failedAssets),
+                retryAttempts: Object.fromEntries(retryAttempts),
+                tournamentPhase: tournamentState.currentPhase,
+                timerState: tournamentState.timerState
+            };
+        }
+
+        function validateAssetPaths() {
+            const assets = calculatePositionedAssets(tournamentState);
+            const validation = {
+                totalAssets: assets.length,
+                validPaths: [],
+                invalidPaths: [],
+                checks: []
+            };
+
+            assets.forEach(asset => {
+                const path = getAssetFilePath(asset.asset, asset.type);
+                const img = new Image();
+                
+                img.onload = () => {
+                    validation.validPaths.push({ asset: asset.asset, path, type: asset.type });
+                    validation.checks.push({ asset: asset.asset, status: 'valid', path });
+                };
+                
+                img.onerror = () => {
+                    validation.invalidPaths.push({ asset: asset.asset, path, type: asset.type });
+                    validation.checks.push({ asset: asset.asset, status: 'invalid', path });
+                };
+                
+                img.src = path;
+            });
+
+            return validation;
+        }
+
+        // Update asset positions on overlay
+        function updateAssetPositions(state) {
+            const assetContainer = document.getElementById('asset-container');
+            if (!assetContainer) return;
+
+            // Clear existing assets
+            assetContainer.innerHTML = '';
+
+            // Calculate and create new positioned assets
+            const assets = calculatePositionedAssets(state);
+            
+            assets.forEach(asset => {
+                const assetElement = createAssetElement(asset);
+                assetContainer.appendChild(assetElement);
+            });
         }
 
         // Update tournament state
         function updateTournamentState(newState) {
             const previousPhase = tournamentState.currentPhase;
+            const previousTimerState = tournamentState.timerState;
             tournamentState = { ...tournamentState, ...newState };
 
             // Update team names if changed
             if (newState.teamNames) {
-                updateTeamNames(newState.teamNames);
+                updateTeamNames(newState.teamNames, tournamentState.currentPhase);
             }
 
             // Update background if phase changed
             if (newState.currentPhase && newState.currentPhase !== previousPhase) {
                 updateBackground(newState.currentPhase);
+                // Position team names for new phase
+                positionTeamNames(newState.currentPhase);
+                // Reset asset reveal state for new phase
+                resetAssetRevealState();
+                
+                // Add phase transition animation
+                const overlayContent = document.querySelector('.overlay-content');
+                const assetContainer = document.getElementById('asset-container');
+                if (overlayContent) {
+                    overlayContent.classList.add('phase-transition');
+                    setTimeout(() => overlayContent.classList.remove('phase-transition'), 1000);
+                }
+                if (assetContainer) {
+                    assetContainer.classList.add('phase-transition');
+                    setTimeout(() => assetContainer.classList.remove('phase-transition'), 1000);
+                }
             }
+
+            // With T7 gating, overlay renders strictly from revealed flags
+            updateAssetPositions(tournamentState);
         }
 
         // Initialize overlay
         function initialize() {
             updateBackground(tournamentState.currentPhase);
-            updateTeamNames(tournamentState.teamNames);
+            updateTeamNames(tournamentState.teamNames, tournamentState.currentPhase);
+            updateAssetPositions(tournamentState);
         }
 
         // Tauri event listener setup (when available)
@@ -207,6 +943,14 @@
 
         // Web-based testing interface (for development)
         window.updateOverlay = updateTournamentState;
+        window.revealAssets = revealPendingAssets;
+        window.resetRevealState = resetAssetRevealState;
+        
+        // Error handling and diagnostics interface
+        window.clearFailedAssets = clearFailedAssets;
+        window.retryFailedAssets = retryFailedAssets;
+        window.getAssetDiagnostics = getAssetDiagnostics;
+        window.validateAssetPaths = validateAssetPaths;
 
         // Initialize on load
         window.addEventListener('load', initialize);
@@ -223,6 +967,23 @@
                 });
                 currentIndex++;
             }, 3000);
+        };
+
+        // Test function for staggered reveal animation
+        window.testStaggeredReveal = function() {
+            // Mock some assets for testing
+            updateTournamentState({
+                currentPhase: 'MAP_BAN',
+                mapsBanned: { 
+                    P1: ['ascent', 'bind', 'haven'], 
+                    P2: ['lotus', 'pearl', 'split'] 
+                },
+                teamNames: { P1: 'Team Alpha', P2: 'Team Bravo' },
+                timerState: 'running'
+            });
+            
+            // Reveal with stagger after 2 seconds
+            setTimeout(() => revealPendingAssets(true), 2000);
         };
     </script>
 </body>

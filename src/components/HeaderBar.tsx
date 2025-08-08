@@ -2,7 +2,7 @@ import { useTournamentStore } from '../services/adminStore';
 import { useState } from 'react';
 
 export function HeaderBar() {
-  const { currentPhase, currentPlayer, actionNumber } = useTournamentStore();
+  const { currentPhase, currentPlayer, actionNumber, eventStarted } = useTournamentStore();
   const [overlayCreated, setOverlayCreated] = useState(false);
 
   const showOverlay = async () => {
@@ -67,25 +67,25 @@ export function HeaderBar() {
   };
 
   return (
-    <div className="flex items-center justify-between h-full px-6 bg-gray-800">
+    <div className="flex items-center justify-between h-full px-6 bg-tokyo-surface">
       <div className="flex items-center space-x-6">
-        <h1 className="text-xl font-bold text-white">Tournament Admin</h1>
-        <div className="text-sm text-gray-300">
-          Phase: <span className="text-blue-400 font-medium">{currentPhase}</span>
+        <h1 className="text-xl font-semibold text-tokyo-text tracking-tight">Tournament Admin</h1>
+        <div className="text-sm text-tokyo-text-muted">
+          Phase: <span className="text-tokyo-blue font-medium">{currentPhase}</span>
         </div>
       </div>
       
       <div className="flex items-center space-x-4">
         <button
           onClick={showOverlay}
-          className="px-4 py-2 rounded text-sm font-medium transition-colors bg-blue-600 hover:bg-blue-700 text-white"
+          className="px-4 py-2 rounded text-sm font-medium transition-colors bg-tokyo-accent hover:bg-tokyo-blue text-white tracking-wide"
         >
           Show Overlay
         </button>
         
-        <div className="text-sm text-gray-300">
-          Current Turn: <span className="text-green-400 font-medium">
-            Turn {actionNumber}: {currentPlayer || 'None'}
+        <div className="text-sm text-tokyo-text-muted">
+          Current Turn: <span className="text-tokyo-teal font-medium">
+            {eventStarted ? `Turn ${actionNumber}: ${currentPlayer || '—'}` : 'Not started'}
           </span>
         </div>
       </div>

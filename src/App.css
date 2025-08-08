@@ -1,12 +1,63 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
-/* Ensure proper window sizing */
+/* Tokyo Night Color Palette & Typography Custom Theme */
+@theme {
+  /* Tokyo Night Colors */
+  --color-tokyo-background: #1a1b26;
+  --color-tokyo-background-dark: #16161e;
+  --color-tokyo-background-darker: #0d0f17;
+  --color-tokyo-surface: #24283b;
+  --color-tokyo-surface-light: #2f3549;
+  --color-tokyo-border: #414868;
+  --color-tokyo-border-light: #565f89;
+  
+  --color-tokyo-text: #c0caf5;
+  --color-tokyo-text-muted: #a9b1d6;
+  --color-tokyo-text-dim: #787c99;
+  --color-tokyo-comment: #565f89;
+  
+  --color-tokyo-red: #f7768e;
+  --color-tokyo-orange: #ff9e64;
+  --color-tokyo-yellow: #e0af68;
+  --color-tokyo-green: #9ece6a;
+  --color-tokyo-teal: #73daca;
+  --color-tokyo-cyan: #7dcfff;
+  --color-tokyo-blue: #7aa2f7;
+  --color-tokyo-purple: #bb9af7;
+  --color-tokyo-magenta: #c0caf5;
+  --color-tokyo-pink: #ff75a0;
+  
+  --color-tokyo-accent: #3d59a1;
+  --color-tokyo-selection: #28344a;
+  --color-tokyo-highlight: #515c7e;
+
+  /* Typography System with Geist */
+  --font-geist: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
+  --font-geist--font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  --font-sans: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
+  
+  /* Monospace Typography System */
+  --font-jetbrains: "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+/* Global Typography & Layout */
 html, body {
   margin: 0;
   padding: 0;
   overflow: hidden;
   min-width: 1280px;
   min-height: 720px;
+  font-family: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Force Geist Sans application */
+* {
+  font-family: inherit;
 }
 
 

@@ -8,6 +8,9 @@ export type ActionType = 'MAP_BAN' | 'MAP_PICK' | 'DECIDER' | 'AGENT_BAN' | 'AGE
 // Timer states
 export type TimerState = 'ready' | 'running' | 'paused' | 'finished';
 
+// Asset selection states for OBS timing flow
+export type AssetSelectionState = 'available' | 'selected-pending' | 'revealed' | 'banned' | 'picked' | 'disabled';
+
 // Asset types
 export type MapName = 'abyss' | 'ascent' | 'bind' | 'breeze' | 'corrode' | 'fracture' | 
                      'haven' | 'icebox' | 'lotus' | 'pearl' | 'split' | 'sunset';
@@ -39,6 +42,7 @@ export interface TournamentState {
   currentPlayer: Player | null;
   actionNumber: number; // 1-17 total actions
   firstPlayer: Player; // Tournament starter (P1 or P2)
+  eventStarted?: boolean; // Must be started before selections
   
   // Team configuration
   teamNames: {
@@ -57,6 +61,10 @@ export interface TournamentState {
     P1: string | null;
     P2: string | null;
   };
+  
+  // OBS timing flow state
+  pendingSelection: string | null; // Asset selected but not yet revealed
+  revealedActions: Set<number>; // Actions that have been revealed on OBS
   
   // Independent timer state
   timerState: TimerState;
@@ -83,8 +91,12 @@ export interface TournamentActions {
   prevTurn: () => void;
   resetTurn: () => void;
   
-  // Asset selection
-  selectAsset: (assetName: string) => void;
+  // Asset selection with OBS timing flow
+  selectAsset: (assetName: string) => void; // Immediate selection (internal use)
+  attemptSelection: (assetName: string) => void; // Gated selection per timing rules
+  selectAssetPending: (assetName: string) => void; // Select but don't reveal to OBS
+  revealPendingSelection: () => void; // Reveal pending selection to OBS
+  manualReveal: (assetName: string) => void; // Deprecated for T7 (kept for compatibility)
   
   // Timer controls
   startTimer: () => void;
