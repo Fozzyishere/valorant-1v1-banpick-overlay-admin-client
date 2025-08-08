@@ -57,6 +57,10 @@
                          2px 2px 4px rgba(0, 0, 0, 0.8);
             transition: all 0.3s ease-in-out;
             filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 560px;
         }
 
         .team-name.player1 {
@@ -67,10 +71,16 @@
         .team-name.player2 {
             text-align: right;
             animation: slide-in-right 0.8s ease-out;
+            /* Align right edge to provided X coordinate using translate */
+            transform: translateX(-100%);
         }
 
-        .team-name:hover {
+        /* Preserve right-edge alignment for player2 on hover */
+        .team-name.player1:hover {
             transform: scale(1.02);
+        }
+        .team-name.player2:hover {
+            transform: translateX(-100%) scale(1.02);
             text-shadow: 0 0 15px rgba(255, 255, 255, 0.9), 
                          0 0 25px rgba(255, 255, 255, 0.7), 
                          0 0 35px rgba(255, 255, 255, 0.5),
@@ -182,43 +192,9 @@
             }
         }
 
-        .phase-indicator {
-            position: absolute;
-            bottom: 50px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: white;
-            font-size: 32px;
-            font-weight: bold;
-            text-shadow: 0 0 10px rgba(255, 255, 255, 0.8),
-                         0 0 20px rgba(255, 255, 255, 0.6),
-                         2px 2px 4px rgba(0, 0, 0, 0.8);
-            text-align: center;
-            background: rgba(0, 0, 0, 0.3);
-            padding: 12px 24px;
-            border-radius: 20px;
-            backdrop-filter: blur(10px);
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            transition: all 0.3s ease-in-out;
-            animation: phase-fade-in 0.6s ease-out;
-        }
+        /* phase indicator removed */
 
-        .phase-indicator:hover {
-            background: rgba(0, 0, 0, 0.5);
-            border-color: rgba(255, 255, 255, 0.4);
-            transform: translateX(-50%) scale(1.02);
-        }
-
-        @keyframes phase-fade-in {
-            0% {
-                opacity: 0;
-                transform: translateX(-50%) translateY(20px);
-            }
-            100% {
-                opacity: 1;
-                transform: translateX(-50%) translateY(0);
-            }
-        }
+        /* phase fade animation removed */
 
         @keyframes asset-reveal-sparkle {
             0% {
@@ -261,6 +237,28 @@
         .visible {
             opacity: 1;
         }
+
+        /* Timer display styling (top, seconds-only, no background) */
+        .timer-display {
+            position: absolute;
+            top: 18px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 44px;
+            font-weight: 900;
+            font-family: 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.85),
+                         0 0 18px rgba(255, 255, 255, 0.6),
+                         2px 2px 4px rgba(0, 0, 0, 0.8);
+            letter-spacing: 1px;
+            transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+            user-select: none;
+        }
+        .timer-display.ready {}
+        .timer-display.running {}
+        .timer-display.paused {}
+        .timer-display.finished {}
     </style>
 </head>
 <body>
@@ -273,10 +271,7 @@
     <div class="overlay-content">
         <div class="team-name player1" id="team1-name">Player 1</div>
         <div class="team-name player2" id="team2-name">Player 2</div>
-        
-        <div class="phase-indicator" id="phase-indicator">
-            Map Ban Phase
-        </div>
+        <div class="timer-display ready" id="timer-display">3</div>
     </div>
 
     <div class="asset-container" id="asset-container">
@@ -397,14 +392,8 @@
             'CONCLUSION': 'conclusion-bg'
         };
 
-        // Phase display text mapping
-        const phaseDisplayText = {
-            'MAP_BAN': 'Map Ban Phase',
-            'MAP_PICK': 'Map Pick Phase',
-            'AGENT_BAN': 'Agent Ban Phase',
-            'AGENT_PICK': 'Agent Pick Phase',
-            'CONCLUSION': 'Tournament Complete'
-        };
+        // Phase display text mapping (no longer used)
+        const phaseDisplayText = {};
 
         // Update background based on current phase
         function updateBackground(phase) {
@@ -424,11 +413,7 @@
                 }
             }
 
-            // Update phase indicator text
-            const phaseIndicator = document.getElementById('phase-indicator');
-            if (phaseIndicator) {
-                phaseIndicator.textContent = phaseDisplayText[phase] || 'Tournament Phase';
-            }
+            // Phase indicator removed
         }
 
         // Update team names with positioning
@@ -464,11 +449,24 @@
             if (team1Element && coords.p1) {
                 team1Element.style.left = `${coords.p1.x}px`;
                 team1Element.style.top = `${coords.p1.y}px`;
+                team1Element.style.transform = '';
             }
             if (team2Element && coords.p2) {
                 team2Element.style.left = `${coords.p2.x}px`;
                 team2Element.style.top = `${coords.p2.y}px`;
+                // Keep right-edge anchoring via translate
+                team2Element.style.transform = 'translateX(-100%)';
             }
+        }
+
+        // Update timer display (seconds only)
+        function updateTimerDisplay(timerSeconds, timerState) {
+            const timerEl = document.getElementById('timer-display');
+            if (!timerEl) return;
+            const secs = Math.max(0, Math.floor(timerSeconds || 0));
+            timerEl.textContent = String(secs);
+            timerEl.classList.remove('ready', 'running', 'paused', 'finished');
+            if (timerState) timerEl.classList.add(String(timerState));
         }
 
         // Generate asset file path
@@ -925,6 +923,9 @@
 
             // With T7 gating, overlay renders strictly from revealed flags
             updateAssetPositions(tournamentState);
+
+            // Update timer readout
+            updateTimerDisplay(tournamentState.timerSeconds, tournamentState.timerState);
         }
 
         // Initialize overlay
@@ -932,6 +933,7 @@
             updateBackground(tournamentState.currentPhase);
             updateTeamNames(tournamentState.teamNames, tournamentState.currentPhase);
             updateAssetPositions(tournamentState);
+            updateTimerDisplay(tournamentState.timerSeconds, tournamentState.timerState);
         }
 
         // Tauri event listener setup (when available)

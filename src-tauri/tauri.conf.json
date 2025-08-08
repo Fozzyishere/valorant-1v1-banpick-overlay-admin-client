@@ -27,7 +27,7 @@
         "height": 1080,
         "resizable": false,
         "fullscreen": false,
-        "decorations": false,
+        "decorations": true,
         "alwaysOnTop": false,
         "visible": false,
         "label": "overlay",
