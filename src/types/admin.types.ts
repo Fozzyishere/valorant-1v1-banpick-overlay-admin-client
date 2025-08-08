@@ -87,8 +87,9 @@ export interface TournamentActions {
   
   // Turn control
   startEvent: () => void;
-  nextTurn: () => void;
-  prevTurn: () => void;
+  nextTurn: () => void; // deprecated
+  prevTurn: () => void; // deprecated
+  autoAdvanceTurn: () => void; // internal: advance after timed confirmation
   resetTurn: () => void;
   
   // Asset selection with OBS timing flow

@@ -6,13 +6,8 @@ export function TurnControlPanel() {
     firstPlayer,
     teamNames,
     actionNumber,
-    timerState,
-    pendingSelection,
     setFirstPlayer,
     setPlayerName,
-    nextTurn,
-    prevTurn,
-    resetTurn,
     resetTournament
   } = useTournamentStore();
 
@@ -86,48 +81,18 @@ export function TurnControlPanel() {
         <div className="text-tokyo-text font-medium">{turnInfo.description}</div>
       </div>
       
-      {/* Turn Navigation */}
+      {/* Simplified Controls */}
       <div className="space-y-3">
-        {/* Turn Navigation */}
-        <div>
-          <label className="text-sm text-tokyo-text-dim mb-2 block">Turn Navigation:</label>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={prevTurn}
-              disabled={actionNumber === 1}
-              className="px-3 py-2 bg-tokyo-border hover:bg-tokyo-border-light disabled:bg-tokyo-surface-light disabled:cursor-not-allowed disabled:text-tokyo-text-dim text-white rounded text-sm font-medium transition-colors"
-            >
-              PREV
-            </button>
-            
-            <button
-              onClick={nextTurn}
-              disabled={timerState === 'running' || !!pendingSelection}
-              className="px-3 py-2 bg-tokyo-accent hover:bg-tokyo-blue disabled:bg-tokyo-surface-light disabled:cursor-not-allowed disabled:text-tokyo-text-dim text-white rounded text-sm font-medium transition-colors"
-            >
-              NEXT
-            </button>
-          </div>
+        <div className="text-xs text-tokyo-text-dim">
+          Turn progression happens automatically upon confirming a selection.
         </div>
-        
-        {/* Reset Controls */}
         <div>
-          <label className="text-sm text-tokyo-text-dim mb-2 block">Reset Options:</label>
-          <div className="space-y-2">
-            <button
-              onClick={resetTurn}
-              className="w-full px-4 py-2 bg-tokyo-orange hover:bg-tokyo-yellow text-tokyo-background rounded text-sm font-medium transition-colors"
-            >
-              RESET TURN
-            </button>
-            
-            <button
-              onClick={resetTournament}
-              className="w-full px-4 py-2 bg-tokyo-red hover:bg-tokyo-pink text-white rounded text-sm font-medium transition-colors"
-            >
-              RESET TOURNAMENT
-            </button>
-          </div>
+          <button
+            onClick={resetTournament}
+            className="w-full px-4 py-2 bg-tokyo-red hover:bg-tokyo-pink text-white rounded text-sm font-medium transition-colors"
+          >
+            RESET TOURNAMENT
+          </button>
         </div>
       </div>
       

@@ -10,8 +10,7 @@ import type {
 import {
   calculateCurrentPlayer,
   getCurrentPhase,
-  getActionType,
-  validateTurnTransition
+  getActionType
 } from '../utils/tournamentHelpers';
 
 // Transform store data to overlay format
@@ -124,14 +123,15 @@ export const useTournamentStore = create<TournamentStore>((set, get) => ({
 
   setPlayerName: (player: Player, name: string) => {
     set((state) => {
+      // Allow empty string so user can clear the input before typing a new name
       const newState = {
         ...state,
         teamNames: {
           ...state.teamNames,
-          [player]: name.trim() || `Player ${player.slice(1)}`
+          [player]: name
         },
         lastError: null
-      };
+      } as TournamentStore;
       emitOverlayUpdate(newState);
       return newState;
     });
@@ -139,122 +139,42 @@ export const useTournamentStore = create<TournamentStore>((set, get) => ({
 
   // Turn control actions
   nextTurn: () => {
+    // Deprecated: explicit NEXT turn navigation removed in favor of confirm-on-selection
+  },
+
+  prevTurn: () => {
+    // Deprecated: explicit PREV turn navigation removed in favor of confirm-on-selection
+  },
+
+  // Auto-advance after successful, revealed selection when timer completes
+  autoAdvanceTurn: () => {
     set((state) => {
-      // Enforce gating: cannot advance while timer running or selection not revealed
-      if (state.timerState === 'running' || state.pendingSelection) {
-        return { ...state, lastError: 'Complete and reveal this turn before advancing.' };
-      }
-
-      if (!state.revealedActions.has(state.actionNumber)) {
-        return { ...state, lastError: 'Complete and reveal this turn before advancing.' };
-      }
-
       const targetAction = state.actionNumber + 1;
-      
       // Don't advance beyond action 17
       if (targetAction > 17) {
-        return {
+        const finished: TournamentStore = {
           ...state,
           currentPhase: 'CONCLUSION',
           currentPlayer: null,
           lastError: null
-        };
+        } as TournamentStore;
+        emitOverlayUpdate(finished);
+        return finished;
       }
-      
-      // Validate transition
-      const maxCompleted = state.actionHistory.length;
-      const validation = validateTurnTransition(targetAction, maxCompleted);
-      
-      if (!validation.valid) {
-        return { ...state, lastError: validation.error };
-      }
-      
-      // Calculate new state
       const newCurrentPlayer = calculateCurrentPlayer(targetAction, state.firstPlayer);
       const newPhase = getCurrentPhase(targetAction);
-      
-      const newState: TournamentStore = {
+      const adv: TournamentStore = {
         ...state,
         actionNumber: targetAction,
         currentPlayer: newCurrentPlayer,
         currentPhase: newPhase,
-        // Prepare for next turn
         pendingSelection: null,
         timerState: 'ready',
         timerSeconds: 3,
         lastError: null
-      };
-      
-      emitOverlayUpdate(newState);
-      return newState;
-    });
-  },
-
-  prevTurn: () => {
-    set((state) => {
-      const targetAction = state.actionNumber - 1;
-      
-      // Don't go below action 1
-      if (targetAction < 1) {
-        return { ...state, lastError: 'Cannot go before action 1' };
-      }
-
-      // Roll back effects of the turn we are going back to (targetAction)
-      const actionToRevert = state.actionHistory.find(a => a.actionNumber === targetAction);
-      let newState: any = { ...state };
-
-      if (actionToRevert) {
-        switch (actionToRevert.actionType) {
-          case 'MAP_BAN':
-            newState.mapsBanned = state.mapsBanned.filter(
-              ban => !(ban.name === actionToRevert.selection && ban.player === actionToRevert.player)
-            );
-            break;
-          case 'MAP_PICK':
-            newState.mapsPicked = state.mapsPicked.filter(
-              pick => !(pick.name === actionToRevert.selection && pick.player === actionToRevert.player)
-            );
-            break;
-          case 'DECIDER':
-            newState.deciderMap = null;
-            break;
-          case 'AGENT_BAN':
-            newState.agentsBanned = state.agentsBanned.filter(
-              ban => !(ban.name === actionToRevert.selection && ban.player === actionToRevert.player)
-            );
-            break;
-          case 'AGENT_PICK':
-            newState.agentPicks = {
-              ...state.agentPicks,
-              [actionToRevert.player]: null
-            };
-            break;
-        }
-
-        // Remove from history and revealed set
-        newState.actionHistory = state.actionHistory.filter(a => a !== actionToRevert);
-        const newRevealed = new Set(state.revealedActions);
-        newRevealed.delete(targetAction);
-        newState.revealedActions = newRevealed;
-      }
-
-      // Clear pending and reset timer for safety
-      if (newState.timerInterval) clearInterval(newState.timerInterval);
-      newState.pendingSelection = null;
-      newState.timerState = 'ready';
-      newState.timerSeconds = 3;
-      
-      // Calculate new turn pointers
-      const newCurrentPlayer = calculateCurrentPlayer(targetAction, state.firstPlayer);
-      const newPhase = getCurrentPhase(targetAction);
-
-      newState.actionNumber = targetAction;
-      newState.currentPlayer = newCurrentPlayer;
-      newState.currentPhase = newPhase;
-      newState.lastError = null;
-      
-      emitOverlayUpdate(newState);
-      return newState;
+      } as TournamentStore;
+      emitOverlayUpdate(adv);
+      return adv;
     });
   },
 
@@ -330,6 +250,10 @@ export const useTournamentStore = create<TournamentStore>((set, get) => ({
             break;
         }
         newState.actionHistory = state.actionHistory.filter(a => a !== actionToRevert);
+      }
+
+      // Always clear revealed flag for current action on reset
+      {
         const newRevealed = new Set(state.revealedActions);
         newRevealed.delete(currentAction);
         newState.revealedActions = newRevealed;
@@ -422,6 +346,12 @@ export const useTournamentStore = create<TournamentStore>((set, get) => ({
       newState.revealedActions = new Set([...state.revealedActions, state.actionNumber]);
       newState.pendingSelection = null;
       
+      // If timer already finished, auto-advance turn immediately
+      if (state.timerState === 'finished') {
+        // Defer to allow state commit
+        setTimeout(() => get().autoAdvanceTurn(), 0);
+      }
+
       emitOverlayUpdate(newState);
       return newState;
     });
@@ -438,10 +368,14 @@ export const useTournamentStore = create<TournamentStore>((set, get) => ({
       if (state.timerState === 'ready') {
         return { ...state, lastError: 'Start the timer before selecting a result for this turn.' };
       }
-      // If already revealed for this turn, block further selections
+      // If rewound/reset, ensure previously revealed flag is cleared for this action
       if (state.revealedActions.has(state.actionNumber)) {
-        return { ...state, lastError: 'Selection for this turn already confirmed. Use RESET TURN to change it.' };
+        const newRevealed = new Set(state.revealedActions);
+        newRevealed.delete(state.actionNumber);
+        return { ...state, revealedActions: newRevealed, lastError: null } as TournamentStore;
       }
+      // If already revealed for this turn, block further selections
+      // (handled above)
       // Pending cannot be changed unless reset
       if (state.pendingSelection) {
         return { ...state, lastError: 'A selection is already pending. Reset the turn to change it.' };
@@ -494,6 +428,11 @@ export const useTournamentStore = create<TournamentStore>((set, get) => ({
       if (!state.eventStarted) {
         return { ...state, lastError: 'Event not started. Click START EVENT to begin turn 1.' };
       }
+      // If this action was previously revealed (e.g., after rewind), clear it on new timing cycle
+      const clearedRevealed = new Set(state.revealedActions);
+      if (clearedRevealed.has(state.actionNumber)) {
+        clearedRevealed.delete(state.actionNumber);
+      }
       // Clear existing interval if any
       if (state.timerInterval) {
         clearInterval(state.timerInterval);
@@ -515,28 +454,40 @@ export const useTournamentStore = create<TournamentStore>((set, get) => ({
               const toReveal = currentState.pendingSelection;
               setTimeout(() => get().selectAsset(toReveal), 0);
             }
-            
-            return {
+        
+        const finishedState = {
               ...currentState,
               timerSeconds: 0,
               timerState: 'finished',
               timerInterval: null
-            };
+            } as TournamentStore;
+            emitOverlayUpdate(finishedState);
+
+        // If selection already revealed for this action, auto-advance after timer end
+        if (finishedState.revealedActions.has(finishedState.actionNumber)) {
+          setTimeout(() => get().autoAdvanceTurn(), 0);
+        }
+            return finishedState;
           }
           
-          return {
+          const tickingState = {
             ...currentState,
             timerSeconds: newSeconds
-          };
+          } as TournamentStore;
+          emitOverlayUpdate(tickingState);
+          return tickingState;
         });
       }, 1000);
       
-      return {
+      const newState = {
         ...state,
         timerState: 'running',
         timerInterval: interval,
         lastError: null
-      };
+      } as TournamentStore;
+      newState.revealedActions = clearedRevealed;
+      emitOverlayUpdate(newState);
+      return newState;
     });
   },
 
@@ -549,12 +500,14 @@ export const useTournamentStore = create<TournamentStore>((set, get) => ({
         clearInterval(state.timerInterval);
       }
       
-      return {
+      const newState = {
         ...state,
         timerState: 'paused',
         timerInterval: null,
         lastError: null
-      };
+      } as TournamentStore;
+      emitOverlayUpdate(newState);
+      return newState;
     });
   },
 
@@ -564,14 +517,16 @@ export const useTournamentStore = create<TournamentStore>((set, get) => ({
         clearInterval(state.timerInterval);
       }
       const clearedPending = state.pendingSelection ? 'Timer reset; pending selection cleared. Re-start timer and select again.' : null;
-      return {
+      const newState = {
         ...state,
         timerState: 'ready',
         timerSeconds: 3,
         timerInterval: null,
         pendingSelection: null,
         lastError: clearedPending
-      };
+      } as TournamentStore;
+      emitOverlayUpdate(newState);
+      return newState;
     });
   },
 

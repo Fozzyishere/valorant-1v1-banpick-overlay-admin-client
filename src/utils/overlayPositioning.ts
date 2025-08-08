@@ -19,8 +19,8 @@ export interface AssetSlot {
 // Phase 1: Map Phase coordinate mapping
 export const PHASE1_COORDINATES = {
   teamNames: {
-    p1: { x: 332, y: 156, align: 'left' as const },
-    p2: { x: 1582, y: 156, align: 'right' as const }
+    p1: { x: 342, y: 159, align: 'left' as const },
+    p2: { x: 1572, y: 159, align: 'right' as const }
   },
   p1MapBans: [
     { x: 229, y: 325 },  // P1 Map Ban 1
@@ -42,8 +42,8 @@ export const PHASE1_COORDINATES = {
 // Phase 2: Agent Phase coordinate mapping
 export const PHASE2_COORDINATES = {
   teamNames: {
-    p1: { x: 332, y: 156, align: 'left' as const },
-    p2: { x: 1582, y: 156, align: 'right' as const }
+    p1: { x: 342, y: 159, align: 'left' as const },
+    p2: { x: 1572, y: 159, align: 'right' as const }
   },
   p1AgentBans: [
     { x: 229, y: 313 },  // P1 Agent Ban 1
@@ -64,8 +64,8 @@ export const PHASE2_COORDINATES = {
 // Conclusion: Complete tournament display coordinate mapping
 export const CONCLUSION_COORDINATES = {
   teamNames: {
-    p1: { x: 332, y: 156, align: 'left' as const },
-    p2: { x: 1582, y: 156, align: 'right' as const }
+    p1: { x: 342, y: 159, align: 'left' as const },
+    p2: { x: 1572, y: 159, align: 'right' as const }
   },
   p1MapBans: [
     { x: 229, y: 313 },   // P1 Map Ban 1

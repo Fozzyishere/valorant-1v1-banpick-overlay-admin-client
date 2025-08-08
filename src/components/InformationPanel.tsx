@@ -1,6 +1,7 @@
 import { useTournamentStore } from '../services/adminStore';
 import { getAvailableAssets, isMapPhase, isAgentPhase, ALL_MAPS, ALL_AGENTS } from '../utils/tournamentHelpers';
 import type { AssetSelectionState } from '../types/admin.types';
+import { useState, useCallback } from 'react';
 
 export function InformationPanel() {
   const {
@@ -15,6 +16,8 @@ export function InformationPanel() {
     
   } = useTournamentStore();
 
+  const [confirmAsset, setConfirmAsset] = useState<string | null>(null);
+
   const availability = getAvailableAssets(
     mapsBanned,
     mapsPicked,
@@ -27,8 +30,20 @@ export function InformationPanel() {
   const isAgentActive = isAgentPhase(actionNumber);
 
   const handleAssetClick = (assetName: string) => {
-    attemptSelection(assetName);
+    // Open non-blocking confirmation instead of blocking window.confirm
+    setConfirmAsset(assetName);
   };
+
+  const confirmSelection = useCallback(() => {
+    if (confirmAsset) {
+      attemptSelection(confirmAsset);
+      setConfirmAsset(null);
+    }
+  }, [confirmAsset, attemptSelection]);
+
+  const cancelSelection = useCallback(() => {
+    setConfirmAsset(null);
+  }, []);
 
   const getAssetState = (assetName: string, type: 'map' | 'agent') => {
     if (type === 'map') {
@@ -70,7 +85,7 @@ export function InformationPanel() {
   };
 
   return (
-    <div className="flex flex-col gap-3 h-full">
+    <div className="flex flex-col gap-3 h-full relative">
       <h2 className="text-lg font-semibold text-tokyo-text tracking-tight">Asset Selection</h2>
       
       {/* Map Selection - size to content so Agents can take remaining space */}
@@ -121,6 +136,20 @@ export function InformationPanel() {
           })}
         </div>
       </div>
+
+      {/* Non-blocking confirmation dialog */}
+      {confirmAsset && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40">
+          <div className="bg-tokyo-surface border border-tokyo-border rounded-lg p-4 w-[320px] shadow-lg">
+            <div className="text-tokyo-text font-medium mb-2">Confirm Selection</div>
+            <div className="text-sm text-tokyo-text-dim mb-4">Are you sure you want to select "<span className="text-tokyo-text">{confirmAsset}</span>" for this turn?</div>
+            <div className="flex gap-2 justify-end">
+              <button onClick={cancelSelection} className="px-3 py-1.5 rounded bg-tokyo-border text-white hover:bg-tokyo-border-light text-sm">Cancel</button>
+              <button onClick={confirmSelection} className="px-3 py-1.5 rounded bg-tokyo-accent text-white hover:bg-tokyo-blue text-sm">Confirm</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

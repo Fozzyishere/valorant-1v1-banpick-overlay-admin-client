@@ -11,13 +11,21 @@
             box-sizing: border-box;
         }
 
+        @font-face {
+            font-family: 'iCielBrandonText';
+            src: url('/font/icielBrandonText-Bold.ttf') format('truetype');
+            font-weight: 700;
+            font-style: normal;
+            font-display: swap;
+        }
+
         body {
             width: 1920px;
             height: 1080px;
             position: relative;
             overflow: hidden;
             background: transparent;
-            font-family: 'Arial', sans-serif;
+            font-family: 'iCielBrandonText', Arial, sans-serif;
         }
 
         .background-container {
@@ -50,11 +58,8 @@
             position: absolute;
             color: white;
             font-size: 48px;
-            font-weight: bold;
-            text-shadow: 0 0 10px rgba(255, 255, 255, 0.8), 
-                         0 0 20px rgba(255, 255, 255, 0.6), 
-                         0 0 30px rgba(255, 255, 255, 0.4),
-                         2px 2px 4px rgba(0, 0, 0, 0.8);
+            font-weight: 700;
+            text-shadow: none;
             transition: all 0.3s ease-in-out;
             filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
             white-space: nowrap;
@@ -81,10 +86,6 @@
         }
         .team-name.player2:hover {
             transform: translateX(-100%) scale(1.02);
-            text-shadow: 0 0 15px rgba(255, 255, 255, 0.9), 
-                         0 0 25px rgba(255, 255, 255, 0.7), 
-                         0 0 35px rgba(255, 255, 255, 0.5),
-                         2px 2px 6px rgba(0, 0, 0, 0.9);
         }
 
         @keyframes slide-in-left {
@@ -122,8 +123,8 @@
         .positioned-asset {
             position: absolute;
             transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-            max-width: 120px;
-            max-height: 120px;
+            max-width: 120px; /* overridden per-type below when needed */
+            max-height: 120px; /* overridden per-type below when needed */
             object-fit: contain;
             transform-origin: center;
             filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
@@ -147,15 +148,32 @@
         .positioned-asset.agent-banner {
             max-width: 200px;
             max-height: 150px;
-            border-radius: 12px;
+            border-radius: 0;
         }
 
         .positioned-asset.map {
-            border-radius: 8px;
+            width: 144px;
+            height: 95px;
+            max-width: none;
+            max-height: none;
+            border-radius: 0;
+            object-fit: cover; /* fill 144x95 area without letterboxing */
+            object-position: center center;
+        }
+
+        /* Map visual variants */
+        .positioned-asset.map.ban {
+            filter: grayscale(100%) brightness(0.85) contrast(0.95);
+        }
+        .positioned-asset.map.decider {
+            /* Golden glow for decider map */
+            filter: drop-shadow(0 0 4px #f8eb7e)
+                    drop-shadow(0 0 8px rgba(248, 235, 126, 0.3))
+                    drop-shadow(0 0 12px rgba(248, 235, 126, 0.175));
         }
 
         .positioned-asset.agent-icon {
-            border-radius: 50%;
+            border-radius: 0;
         }
 
         .positioned-asset.fallback {
@@ -163,7 +181,7 @@
             background: rgba(200, 200, 200, 0.3);
             backdrop-filter: blur(2px);
             font-family: 'Arial', sans-serif;
-            border-radius: 8px;
+            border-radius: 0;
             animation: pulse-error 2s infinite;
         }
 
@@ -200,16 +218,13 @@
             0% {
                 opacity: 0;
                 transform: scale(0.5) rotate(-180deg);
-                filter: brightness(2) saturate(1.5) drop-shadow(0 0 20px rgba(255, 255, 255, 0.8));
             }
             50% {
                 transform: scale(1.1) rotate(0deg);
-                filter: brightness(1.5) saturate(1.2) drop-shadow(0 0 15px rgba(255, 255, 255, 0.6));
             }
             100% {
                 opacity: 1;
                 transform: scale(1) rotate(0deg);
-                filter: brightness(1) saturate(1) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
             }
         }
 
@@ -246,11 +261,9 @@
             transform: translateX(-50%);
             color: white;
             font-size: 44px;
-            font-weight: 900;
-            font-family: 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
-            text-shadow: 0 0 10px rgba(255, 255, 255, 0.85),
-                         0 0 18px rgba(255, 255, 255, 0.6),
-                         2px 2px 4px rgba(0, 0, 0, 0.8);
+            font-weight: 700;
+            font-family: 'iCielBrandonText', Arial, sans-serif;
+            text-shadow: none;
             letter-spacing: 1px;
             transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
             user-select: none;
@@ -306,8 +319,8 @@
         // Asset positioning coordinates
         const PHASE1_COORDINATES = {
             teamNames: {
-                p1: { x: 332, y: 156 },
-                p2: { x: 1582, y: 156 }
+                p1: { x: 342, y: 159 },
+                p2: { x: 1572, y: 159 }
             },
             p1MapBans: [
                 { x: 229, y: 325 },
@@ -328,8 +341,8 @@
 
         const PHASE2_COORDINATES = {
             teamNames: {
-                p1: { x: 332, y: 156 },
-                p2: { x: 1582, y: 156 }
+                p1: { x: 342, y: 159 },
+                p2: { x: 1572, y: 159 }
             },
             p1AgentBans: [
                 { x: 229, y: 313 },
@@ -349,8 +362,8 @@
 
         const CONCLUSION_COORDINATES = {
             teamNames: {
-                p1: { x: 332, y: 156 },
-                p2: { x: 1582, y: 156 }
+                p1: { x: 342, y: 159 },
+                p2: { x: 1572, y: 159 }
             },
             p1MapBans: [
                 { x: 229, y: 313 },
@@ -422,10 +435,12 @@
             const team2Element = document.getElementById('team2-name');
 
             if (team1Element) {
-                team1Element.textContent = teamNames.P1 || 'Player 1';
+                const t1 = (teamNames.P1 ?? '').trim();
+                team1Element.textContent = t1.length ? t1 : 'Player 1';
             }
             if (team2Element) {
-                team2Element.textContent = teamNames.P2 || 'Player 2';
+                const t2 = (teamNames.P2 ?? '').trim();
+                team2Element.textContent = t2.length ? t2 : 'Player 2';
             }
 
             // Position team names based on current phase
@@ -486,8 +501,19 @@
             fallback.className = `positioned-asset fallback ${asset.type} ${asset.revealed ? 'revealed' : 'hidden'}`;
             fallback.style.left = `${asset.position.x}px`;
             fallback.style.top = `${asset.position.y}px`;
-            fallback.style.width = asset.type === 'agent-banner' ? '200px' : '120px';
-            fallback.style.height = asset.type === 'agent-banner' ? '150px' : '120px';
+            // Size per asset type
+            if (asset.type === 'agent-banner') {
+                fallback.style.width = '200px';
+                fallback.style.height = '150px';
+            } else if (asset.type === 'map') {
+                fallback.style.width = '144px';
+                fallback.style.height = '95px';
+                fallback.style.objectFit = 'cover';
+                fallback.style.objectPosition = 'center';
+            } else {
+                fallback.style.width = '120px';
+                fallback.style.height = '120px';
+            }
             fallback.style.backgroundColor = 'rgba(200, 200, 200, 0.3)';
             fallback.style.border = '2px solid #ff6b6b';
             fallback.style.borderRadius = '8px';
@@ -885,6 +911,14 @@
             
             assets.forEach(asset => {
                 const assetElement = createAssetElement(asset);
+                // Apply visual variants for map assets
+                if (asset.type === 'map') {
+                    if (asset.slot && asset.slot.startsWith('ban')) {
+                        assetElement.classList.add('ban');
+                    } else if (asset.slot === 'decider') {
+                        assetElement.classList.add('decider');
+                    }
+                }
                 assetContainer.appendChild(assetElement);
             });
         }
@@ -942,6 +976,20 @@
                 updateTournamentState(event.payload);
             });
         }
+
+        // Local ticking fallback: smoothly animate timer between updates
+        setInterval(() => {
+            // If running, decrement a local display counter by 1s between admin updates
+            if (tournamentState && tournamentState.timerState === 'running') {
+                const next = Math.max(0, (tournamentState.timerSeconds || 0) - 1);
+                // Only visual; do not mutate state other than display
+                const timerEl = document.getElementById('timer-display');
+                if (timerEl) {
+                    timerEl.textContent = String(next);
+                }
+                tournamentState.timerSeconds = next;
+            }
+        }, 1000);
 
         // Web-based testing interface (for development)
         window.updateOverlay = updateTournamentState;
