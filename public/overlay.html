@@ -148,26 +148,74 @@
         }
         .map-slot-overlay.ban {
             background: rgba(0, 0, 0, 0.55);
+            animation: map-ban-fade-in 1s ease-out;
         }
+        
+        @keyframes map-ban-fade-in {
+            from {
+                background: rgba(0, 0, 0, 0);
+            }
+            to {
+                background: rgba(0, 0, 0, 0.55);
+            }
+        }
+        
+        @keyframes map-pick-slot-reveal {
+            0% {
+                background: rgba(0, 255, 200, 0.06);
+                border-color: transparent;
+                box-shadow: none;
+            }
+            100% {
+                background: rgba(0, 255, 200, 0.06);
+                border-color: rgba(0, 255, 200, 0.85);
+                box-shadow: 0 0 8px rgba(0, 255, 200, 0.7), 0 0 14px rgba(0, 255, 200, 0.45);
+            }
+        }
+        
+        @keyframes map-decider-slot-reveal {
+            0% {
+                background: rgba(248, 235, 126, 0.08);
+                border-color: transparent;
+                box-shadow: none;
+            }
+            100% {
+                background: rgba(248, 235, 126, 0.08);
+                border-color: rgba(248, 235, 126, 0.95);
+                box-shadow: 0 0 8px rgba(248, 235, 126, 0.85), 0 0 14px rgba(248, 235, 126, 0.55);
+            }
+        }
+        
         .map-slot-overlay.pick {
             background: rgba(0, 255, 200, 0.06);
-            border: 2px solid rgba(0, 255, 200, 0.85);
+            border-width: 2px;
+            border-style: solid;
+            border-color: rgba(0, 255, 200, 0.85);
             box-shadow: 0 0 8px rgba(0, 255, 200, 0.7), 0 0 14px rgba(0, 255, 200, 0.45);
+            animation: map-pick-slot-reveal 1s ease-out;
         }
+        
         .map-slot-overlay.decider {
             background: rgba(248, 235, 126, 0.08);
-            border: 2px solid rgba(248, 235, 126, 0.95);
+            border-width: 2px;
+            border-style: solid;
+            border-color: rgba(248, 235, 126, 0.95);
             box-shadow: 0 0 8px rgba(248, 235, 126, 0.85), 0 0 14px rgba(248, 235, 126, 0.55);
+            animation: map-decider-slot-reveal 1s ease-out;
         }
 
+        /* Base positioned asset styles */
         .positioned-asset {
             position: absolute;
             transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-            max-width: 120px; /* overridden per-type below when needed */
-            max-height: 120px; /* overridden per-type below when needed */
             object-fit: contain;
             transform-origin: center;
             filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+            /* Use CSS custom properties for dynamic positioning and sizing */
+            left: var(--asset-x, 0);
+            top: var(--asset-y, 0);
+            width: var(--asset-width, 120px);
+            height: var(--asset-height, 120px);
         }
 
         .positioned-asset.hidden {
@@ -185,45 +233,218 @@
             filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.4));
         }
 
-        .positioned-asset.agent-banner {
-            width: 223px;
-            height: 584px;
-            max-width: none;
-            max-height: none;
-            border-radius: 0;
-            object-fit: cover; /* fill box and crop overflow to maintain aspect */
-            object-position: center center; /* crop focus center */
+        /* Phase-specific container classes */
+        .overlay-content.phase-map {
+            --phase-scale: 1.0;
+        }
+        
+        .overlay-content.phase-agent {
+            --phase-scale: 1.0;
+        }
+        
+        .overlay-content.phase-conclusion {
+            --phase-scale: 1.0;
         }
 
-        .positioned-asset.map {
-            width: 144px;
-            height: 95px;
-            max-width: none;
-            max-height: none;
-            border-radius: 0;
-            object-fit: cover; /* fill 144x95 area without letterboxing */
+        /* Phase-specific asset styling */
+        /* MAP PHASE - Small consistent sizing */
+        .asset-container.phase-map .positioned-asset.map,
+        .overlay-content.phase-map .positioned-asset.map {
+            /* Use object-fit: cover to fill the space while maintaining aspect ratio */
+            object-fit: cover;
             object-position: center center;
+            /* Ensure container dimensions are respected */
+            width: var(--asset-width, 143px);
+            height: var(--asset-height, 93px);
+        }
+        
+        .asset-container.phase-map .positioned-asset.map.ban,
+        .overlay-content.phase-map .positioned-asset.map.ban {
+            filter: grayscale(100%) brightness(0.7) contrast(0.9);
+        }
+        
+        /* Animation class applied only once when asset is first revealed */
+        .positioned-asset.map.ban.revealing {
+            animation: map-ban-reveal 1s ease-out;
+        }
+        
+        .positioned-asset.map.pick.revealing {
+            animation: map-pick-reveal 1.5s ease-out;
+        }
+        
+        .positioned-asset.map.decider.revealing {
+            animation: map-decider-reveal 1.5s ease-out;
+        }
+        
+        /* Map ban reveal animation */
+        @keyframes map-ban-reveal {
+            0% {
+                opacity: 0;
+                filter: grayscale(0%) brightness(1) contrast(1);
+            }
+            100% {
+                opacity: 1;
+                filter: grayscale(100%) brightness(0.7) contrast(0.9);
+            }
+        }
+        
+        /* Map pick reveal animation: 0.75s fade-in + 0.375s glow-up + 0.375s glow-down */
+        @keyframes map-pick-reveal {
+            0% {
+                opacity: 0;
+                border-color: rgba(0, 255, 200, 0.6);
+                box-shadow: 0 0 8px rgba(0, 255, 200, 0.4);
+            }
+            50% { /* 0.75s fade-in complete */
+                opacity: 1;
+                border-color: rgba(0, 255, 200, 0.6);
+                box-shadow: 0 0 8px rgba(0, 255, 200, 0.4);
+            }
+            75% { /* 1.125s - peak glow reached */
+                opacity: 1;
+                border-color: rgba(0, 255, 200, 0.9);
+                box-shadow: 0 0 16px rgba(0, 255, 200, 0.7), 0 0 24px rgba(0, 255, 200, 0.3);
+            }
+            100% { /* 1.5s - glow down to normal */
+                opacity: 1;
+                border-color: rgba(0, 255, 200, 0.6);
+                box-shadow: 0 0 8px rgba(0, 255, 200, 0.4);
+            }
+        }
+        
+        /* Map decider reveal animation: 0.75s fade-in + 0.375s glow-up + 0.375s glow-down */
+        @keyframes map-decider-reveal {
+            0% {
+                opacity: 0;
+                border-color: rgba(248, 235, 126, 0.8);
+                filter: drop-shadow(0 0 4px #f8eb7e) drop-shadow(0 0 8px rgba(248, 235, 126, 0.3));
+            }
+            50% { /* 0.75s fade-in complete */
+                opacity: 1;
+                border-color: rgba(248, 235, 126, 0.8);
+                filter: drop-shadow(0 0 4px #f8eb7e) drop-shadow(0 0 8px rgba(248, 235, 126, 0.3));
+            }
+            75% { /* 1.125s - peak glow reached */
+                opacity: 1;
+                border-color: rgba(248, 235, 126, 1.0);
+                filter: drop-shadow(0 0 8px #f8eb7e) drop-shadow(0 0 16px rgba(248, 235, 126, 0.6)) drop-shadow(0 0 24px rgba(248, 235, 126, 0.2));
+            }
+            100% { /* 1.5s - glow down to normal */
+                opacity: 1;
+                border-color: rgba(248, 235, 126, 0.8);
+                filter: drop-shadow(0 0 4px #f8eb7e) drop-shadow(0 0 8px rgba(248, 235, 126, 0.3));
+            }
+        }
+        
+        
+        .asset-container.phase-map .positioned-asset.map.pick,
+        .overlay-content.phase-map .positioned-asset.map.pick {
+            border: 2px solid rgba(0, 255, 200, 0.6);
+            box-shadow: 0 0 8px rgba(0, 255, 200, 0.4);
+        }
+        
+        .asset-container.phase-map .positioned-asset.map.decider,
+        .overlay-content.phase-map .positioned-asset.map.decider {
+            border: 2px solid rgba(248, 235, 126, 0.8);
+            filter: drop-shadow(0 0 4px #f8eb7e) drop-shadow(0 0 8px rgba(248, 235, 126, 0.3));
         }
 
-        /* Per-phase box sizes are now applied inline; no global overrides here */
-
-        /* Map visual variants */
-        .positioned-asset.map.ban {
-            filter: grayscale(100%) brightness(0.85) contrast(0.95);
-        }
-        .positioned-asset.map.decider {
-            /* Golden glow for decider map */
-            filter: drop-shadow(0 0 4px #f8eb7e)
-                    drop-shadow(0 0 8px rgba(248, 235, 126, 0.3))
-                    drop-shadow(0 0 12px rgba(248, 235, 126, 0.175));
-        }
-
-        .positioned-asset.agent-icon {
-            width: 93px;
-            height: 93px;
-            border-radius: 0;
+        /* AGENT PHASE - Agent-focused styling */
+        .asset-container.phase-agent .positioned-asset.agent-icon,
+        .overlay-content.phase-agent .positioned-asset.agent-icon {
+            border-radius: 50%;
             object-fit: contain;
             object-position: center center;
+            border: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .asset-container.phase-agent .positioned-asset.agent-icon.ban,
+        .overlay-content.phase-agent .positioned-asset.agent-icon.ban {
+            filter: grayscale(100%) brightness(0.7);
+            border-color: rgba(255, 75, 75, 0.8);
+        }
+        
+        .asset-container.phase-agent .positioned-asset.agent-banner,
+        .overlay-content.phase-agent .positioned-asset.agent-banner {
+            border-radius: 8px;
+            object-fit: cover;
+            object-position: center center;
+            border: 3px solid rgba(138, 43, 226, 0.6);
+            box-shadow: 0 0 12px rgba(138, 43, 226, 0.4);
+        }
+
+        /* CONCLUSION PHASE - Compact summary view */
+        .asset-container.phase-conclusion .positioned-asset.map,
+        .overlay-content.phase-conclusion .positioned-asset.map {
+            border-radius: 6px;
+            object-fit: cover;
+            object-position: center center;
+        }
+        
+        .asset-container.phase-conclusion .positioned-asset.map.ban,
+        .overlay-content.phase-conclusion .positioned-asset.map.ban {
+            filter: grayscale(100%) brightness(0.8) contrast(0.9);
+            border: 1px solid rgba(255, 75, 75, 0.4);
+        }
+        
+        .asset-container.phase-conclusion .positioned-asset.map.pick,
+        .overlay-content.phase-conclusion .positioned-asset.map.pick {
+            border: 3px solid rgba(0, 255, 200, 0.8);
+            box-shadow: 0 0 12px rgba(0, 255, 200, 0.6);
+        }
+        
+        .asset-container.phase-conclusion .positioned-asset.map.decider,
+        .overlay-content.phase-conclusion .positioned-asset.map.decider {
+            border: 3px solid rgba(248, 235, 126, 0.9);
+            filter: drop-shadow(0 0 6px #f8eb7e) drop-shadow(0 0 12px rgba(248, 235, 126, 0.5));
+        }
+        
+        .asset-container.phase-conclusion .positioned-asset.agent-icon,
+        .overlay-content.phase-conclusion .positioned-asset.agent-icon {
+            border-radius: 50%;
+            object-fit: contain;
+            border: 2px solid rgba(255, 75, 75, 0.6);
+            filter: grayscale(100%) brightness(0.8);
+        }
+        
+        .asset-container.phase-conclusion .positioned-asset.agent-banner,
+        .overlay-content.phase-conclusion .positioned-asset.agent-banner {
+            border-radius: 8px;
+            object-fit: cover;
+            border: 2px solid rgba(138, 43, 226, 0.7);
+            box-shadow: 0 0 8px rgba(138, 43, 226, 0.5);
+        }
+
+        /* Phase transition animations */
+        .overlay-content.phase-transition-enter {
+            animation: phase-enter 0.8s ease-out;
+        }
+        
+        .overlay-content.phase-transition-exit {
+            animation: phase-exit 0.5s ease-in;
+        }
+        
+        @keyframes phase-enter {
+            0% {
+                opacity: 0;
+                transform: scale(0.95) translateY(10px);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+        
+        @keyframes phase-exit {
+            0% {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+            100% {
+                opacity: 0;
+                transform: scale(0.95) translateY(-10px);
+            }
         }
 
         .positioned-asset.fallback {
@@ -303,14 +524,10 @@
             opacity: 1;
         }
 
-        /* Timer display styling (top, seconds-only, no background) */
+        /* Timer display styling with phase-specific positioning */
         .timer-display {
             position: absolute;
-            top: 18px;
-            left: 50%;
-            transform: translateX(-50%);
             color: white;
-            font-size: 44px;
             font-weight: 700;
             font-family: 'iCielBrandonText', Arial, sans-serif;
             text-shadow: none;
@@ -318,6 +535,29 @@
             transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
             user-select: none;
         }
+        
+        /* Phase-specific timer positioning */
+        .overlay-content.phase-map .timer-display {
+            top: 18px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 44px;
+        }
+        
+        .overlay-content.phase-agent .timer-display {
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 42px;
+        }
+        
+        .overlay-content.phase-conclusion .timer-display {
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 46px;
+        }
+        
         .timer-display.ready {}
         .timer-display.running {}
         .timer-display.paused {}
@@ -362,6 +602,8 @@
         let revealedAssets = new Set(); // Assets that are visible on overlay
         let failedAssets = new Set(); // Assets that failed to load
         let retryAttempts = new Map(); // Track retry attempts for failed assets
+        let animatedAssets = new Set(); // Track assets that have already played their reveal animation
+        let animatedSlotOverlays = new Set(); // Track slot overlays that have already played their reveal animation
 
         // Error handling configuration
         const MAX_RETRY_ATTEMPTS = 3;
@@ -383,6 +625,8 @@
             revealedAssets.clear();
             failedAssets.clear();
             retryAttempts.clear();
+            animatedAssets.clear();
+            animatedSlotOverlays.clear();
         }
 
         // Phase-specific coordinate system with dimensions and styling data
@@ -409,19 +653,19 @@
                 p2: { x: 1572, y: 159, fontSize: '48px' }
             },
             p1MapBans: [
-                { x: 229, y: 325, width: 144, height: 95 },
-                { x: 384, y: 325, width: 144, height: 95 },
-                { x: 538, y: 325, width: 144, height: 95 }
+                { x: 229, y: 325, width: 143, height: 93 },
+                { x: 384, y: 325, width: 143, height: 93 },
+                { x: 538, y: 325, width: 143, height: 93 }
             ],
             p2MapBans: [
-                { x: 1546, y: 325, width: 144, height: 95 },
-                { x: 1392, y: 325, width: 144, height: 95 },
-                { x: 1237, y: 325, width: 144, height: 95 }
+                { x: 1546, y: 325, width: 143, height: 93 },
+                { x: 1392, y: 325, width: 143, height: 93 },
+                { x: 1237, y: 325, width: 143, height: 93 }
             ],
             mapPicks: {
-                p1: { x: 630, y: 480, width: 144, height: 95 },
-                p2: { x: 1021, y: 480, width: 144, height: 95 },
-                decider: { x: 822, y: 693, width: 144, height: 95 }
+                p1: { x: 734, y: 325, width: 144, height: 95 },
+                p2: { x: 1042, y: 325, width: 144, height: 95 },
+                decider: { x: 888, y: 325, width: 144, height: 95 }
             }
         };
 
@@ -606,23 +850,19 @@
             const team1Element = document.getElementById('team1-name');
             const team2Element = document.getElementById('team2-name');
 
-            let coords;
-            if (currentPhase === 'CONCLUSION') {
-                coords = CONCLUSION_COORDINATES.teamNames;
-            } else if (currentPhase === 'AGENT_PHASE') {
-                coords = PHASE2_COORDINATES.teamNames;
-            } else {
-                coords = PHASE1_COORDINATES.teamNames;
-            }
+            // Get phase-specific coordinates
+            const coords = PHASE_COORDINATES[currentPhase]?.teamNames || PHASE_COORDINATES['MAP_PHASE'].teamNames;
 
             if (team1Element && coords.p1) {
                 team1Element.style.left = `${coords.p1.x}px`;
                 team1Element.style.top = `${coords.p1.y}px`;
+                team1Element.style.fontSize = coords.p1.fontSize || '48px';
                 team1Element.style.transform = '';
             }
             if (team2Element && coords.p2) {
                 team2Element.style.left = `${coords.p2.x}px`;
                 team2Element.style.top = `${coords.p2.y}px`;
+                team2Element.style.fontSize = coords.p2.fontSize || '48px';
                 // Keep right-edge anchoring via translate
                 team2Element.style.transform = 'translateX(-100%)';
             }
@@ -652,28 +892,27 @@
         function createFallbackElement(asset) {
             const fallback = document.createElement('div');
             fallback.id = asset.id;
-            fallback.className = `positioned-asset fallback ${asset.type} ${asset.revealed ? 'revealed' : 'hidden'}`;
-            fallback.style.left = `${asset.position.x}px`;
-            fallback.style.top = `${asset.position.y}px`;
-            // Size per asset type
-            if (asset.type === 'agent-banner') {
-                fallback.style.width = '223px';
-                fallback.style.height = '584px';
-            } else if (asset.type === 'map') {
-                // Default small map slot; enlarge only for pick/decider during conclusion
-                if (tournamentState.currentPhase === 'CONCLUSION' && (asset.slot === 'pick' || asset.slot === 'decider')) {
-                    fallback.style.width = '277px';
-                    fallback.style.height = '156px';
-                } else {
-                    fallback.style.width = '144px';
-                    fallback.style.height = '95px';
-                }
-                fallback.style.objectFit = 'cover';
-                fallback.style.objectPosition = 'center';
-            } else {
-                fallback.style.width = '120px';
-                fallback.style.height = '120px';
+            
+            // Build CSS classes matching main asset element
+            let cssClasses = ['positioned-asset', 'fallback', asset.type];
+            cssClasses.push(asset.revealed ? 'revealed' : 'hidden');
+            
+            if (asset.slot) {
+                const slotType = asset.slot.startsWith('ban') ? 'ban' : 
+                               asset.slot === 'pick' ? 'pick' : 
+                               asset.slot === 'decider' ? 'decider' : asset.slot;
+                cssClasses.push(slotType);
             }
+            
+            fallback.className = cssClasses.join(' ');
+            
+            // Use CSS custom properties for positioning and sizing
+            fallback.style.setProperty('--asset-x', `${asset.position.x}px`);
+            fallback.style.setProperty('--asset-y', `${asset.position.y}px`);
+            fallback.style.setProperty('--asset-width', `${asset.dimensions.width}px`);
+            fallback.style.setProperty('--asset-height', `${asset.dimensions.height}px`);
+            
+            // Fallback-specific styling
             fallback.style.backgroundColor = 'rgba(200, 200, 200, 0.3)';
             fallback.style.border = '2px solid #ff6b6b';
             fallback.style.borderRadius = '8px';
@@ -709,7 +948,7 @@
             });
         }
 
-        // Create positioned asset element with enhanced error handling
+        // Create positioned asset element with CSS-based styling
         function createAssetElement(asset) {
             // Check if this asset has already failed permanently
             if (failedAssets.has(asset.id)) {
@@ -718,33 +957,28 @@
 
             const img = document.createElement('img');
             img.id = asset.id;
-            img.className = `positioned-asset ${asset.type} ${asset.revealed ? 'revealed' : 'hidden'}`;
-            img.src = getAssetFilePath(asset.asset, asset.type);
-            img.style.left = `${asset.position.x}px`;
-            img.style.top = `${asset.position.y}px`;
-            // Phase-aware sizing for maps and agent banners
-            if (asset.type === 'map') {
-                // Default small map slot
-                let w = 144, h = 95;
-                // Enlarge only when current phase uses large pick/decider boxes
-                if (tournamentState.currentPhase === 'CONCLUSION' && (asset.slot === 'pick' || asset.slot === 'decider')) {
-                    w = 277; h = 156;
-                }
-                img.style.width = `${w}px`;
-                img.style.height = `${h}px`;
-                img.style.objectFit = 'cover';
-                img.style.objectPosition = 'center';
-            } else if (asset.type === 'agent-banner') {
-                img.style.width = '223px';
-                img.style.height = '584px';
-                img.style.objectFit = 'cover';
-                img.style.objectPosition = 'center';
-            } else if (asset.type === 'agent-icon') {
-                img.style.width = '93px';
-                img.style.height = '93px';
-                img.style.objectFit = 'contain';
-                img.style.objectPosition = 'center';
+            
+            // Build CSS classes with phase-specific styling
+            let cssClasses = ['positioned-asset', asset.type];
+            cssClasses.push(asset.revealed ? 'revealed' : 'hidden');
+            
+            // Add slot-specific classes for styling variants
+            if (asset.slot) {
+                const slotType = asset.slot.startsWith('ban') ? 'ban' : 
+                               asset.slot === 'pick' ? 'pick' : 
+                               asset.slot === 'decider' ? 'decider' : asset.slot;
+                cssClasses.push(slotType);
             }
+            
+            img.className = cssClasses.join(' ');
+            img.src = getAssetFilePath(asset.asset, asset.type);
+            
+            // Use CSS custom properties for dynamic positioning and sizing
+            img.style.setProperty('--asset-x', `${asset.position.x}px`);
+            img.style.setProperty('--asset-y', `${asset.position.y}px`);
+            img.style.setProperty('--asset-width', `${asset.dimensions.width}px`);
+            img.style.setProperty('--asset-height', `${asset.dimensions.height}px`);
+            
             img.alt = `${asset.player} ${asset.slot} - ${asset.asset}`;
             
             // Enhanced error handling with retry logic
@@ -795,20 +1029,22 @@
             return img;
         }
 
-        // Calculate positioned assets for current tournament state with timing flow
+        // Calculate positioned assets for current tournament state with phase-specific coordinates
         function calculatePositionedAssets(state) {
             const assets = [];
             const { currentPhase, mapsBanned, mapsPicked, deciderMap, agentsBanned, agentPicks, timerState } = state;
 
+            // Get phase-specific coordinates and dimensions
+            const coords = PHASE_COORDINATES[currentPhase] || PHASE_COORDINATES['MAP_PHASE'];
+
             // Determine if we should reveal assets (explicit: only on finished or in conclusion)
             const shouldRevealAssets = timerState === 'finished' || currentPhase === 'CONCLUSION';
 
-            // Phase 1 and Conclusion: Map assets
+            // Map assets (shown in MAP_PHASE and CONCLUSION)
             if (currentPhase === 'MAP_PHASE' || currentPhase === 'CONCLUSION') {
-                const coords = currentPhase === 'CONCLUSION' ? CONCLUSION_COORDINATES : PHASE1_COORDINATES;
 
                 // P1 Map Bans
-                if (mapsBanned?.P1) {
+                if (mapsBanned?.P1 && coords.p1MapBans) {
                     mapsBanned.P1.forEach((map, index) => {
                         if (map && coords.p1MapBans[index]) {
                             const assetId = `p1-map-ban-${index + 1}`;
@@ -818,7 +1054,8 @@
                                 id: assetId,
                                 type: 'map',
                                 asset: map,
-                                position: coords.p1MapBans[index],
+                                position: { x: coords.p1MapBans[index].x, y: coords.p1MapBans[index].y },
+                                dimensions: { width: coords.p1MapBans[index].width, height: coords.p1MapBans[index].height },
                                 revealed: isRevealed,
                                 player: 'P1',
                                 slot: `ban${index + 1}`
@@ -830,16 +1067,18 @@
                 }
 
                 // P2 Map Bans
-                if (mapsBanned?.P2) {
+                if (mapsBanned?.P2 && coords.p2MapBans) {
                     mapsBanned.P2.forEach((map, index) => {
                         if (map && coords.p2MapBans[index]) {
                             const assetId = `p2-map-ban-${index + 1}`;
                             const isRevealed = shouldRevealAssets || revealedAssets.has(assetId);
+                            
                             assets.push({
                                 id: assetId,
                                 type: 'map',
                                 asset: map,
-                                position: coords.p2MapBans[index],
+                                position: { x: coords.p2MapBans[index].x, y: coords.p2MapBans[index].y },
+                                dimensions: { width: coords.p2MapBans[index].width, height: coords.p2MapBans[index].height },
                                 revealed: isRevealed,
                                 player: 'P2',
                                 slot: `ban${index + 1}`
@@ -850,14 +1089,15 @@
                 }
 
                 // P1 Map Pick
-                if (mapsPicked?.P1 && coords.mapPicks.p1) {
+                if (mapsPicked?.P1 && coords.mapPicks?.p1) {
                     const assetId = 'p1-map-pick';
                     const isRevealed = shouldRevealAssets || revealedAssets.has(assetId);
                     assets.push({
                         id: assetId,
                         type: 'map',
                         asset: mapsPicked.P1,
-                        position: coords.mapPicks.p1,
+                        position: { x: coords.mapPicks.p1.x, y: coords.mapPicks.p1.y },
+                        dimensions: { width: coords.mapPicks.p1.width, height: coords.mapPicks.p1.height },
                         revealed: isRevealed,
                         player: 'P1',
                         slot: 'pick'
@@ -866,14 +1106,15 @@
                 }
 
                 // P2 Map Pick
-                if (mapsPicked?.P2 && coords.mapPicks.p2) {
+                if (mapsPicked?.P2 && coords.mapPicks?.p2) {
                     const assetId = 'p2-map-pick';
                     const isRevealed = shouldRevealAssets || revealedAssets.has(assetId);
                     assets.push({
                         id: assetId,
                         type: 'map',
                         asset: mapsPicked.P2,
-                        position: coords.mapPicks.p2,
+                        position: { x: coords.mapPicks.p2.x, y: coords.mapPicks.p2.y },
+                        dimensions: { width: coords.mapPicks.p2.width, height: coords.mapPicks.p2.height },
                         revealed: isRevealed,
                         player: 'P2',
                         slot: 'pick'
@@ -882,14 +1123,15 @@
                 }
 
                 // Decider Map
-                if (deciderMap && coords.mapPicks.decider) {
+                if (deciderMap && coords.mapPicks?.decider) {
                     const assetId = 'decider-map';
                     const isRevealed = shouldRevealAssets || revealedAssets.has(assetId);
                     assets.push({
                         id: assetId,
                         type: 'map',
                         asset: deciderMap,
-                        position: coords.mapPicks.decider,
+                        position: { x: coords.mapPicks.decider.x, y: coords.mapPicks.decider.y },
+                        dimensions: { width: coords.mapPicks.decider.width, height: coords.mapPicks.decider.height },
                         revealed: isRevealed,
                         player: 'shared',
                         slot: 'decider'
@@ -898,12 +1140,11 @@
                 }
             }
 
-            // Phase 2 and Conclusion: Agent assets
+            // Agent assets (shown in AGENT_PHASE and CONCLUSION)
             if (currentPhase === 'AGENT_PHASE' || currentPhase === 'CONCLUSION') {
-                const coords = currentPhase === 'CONCLUSION' ? CONCLUSION_COORDINATES : PHASE2_COORDINATES;
 
                 // P1 Agent Bans
-                if (agentsBanned?.P1) {
+                if (agentsBanned?.P1 && coords.p1AgentBans) {
                     agentsBanned.P1.forEach((agent, index) => {
                         if (agent && coords.p1AgentBans[index]) {
                             const assetId = `p1-agent-ban-${index + 1}`;
@@ -912,7 +1153,8 @@
                                 id: assetId,
                                 type: 'agent-icon',
                                 asset: agent,
-                                position: coords.p1AgentBans[index],
+                                position: { x: coords.p1AgentBans[index].x, y: coords.p1AgentBans[index].y },
+                                dimensions: { width: coords.p1AgentBans[index].width, height: coords.p1AgentBans[index].height },
                                 revealed: isRevealed,
                                 player: 'P1',
                                 slot: `ban${index + 1}`
@@ -923,7 +1165,7 @@
                 }
 
                 // P2 Agent Bans
-                if (agentsBanned?.P2) {
+                if (agentsBanned?.P2 && coords.p2AgentBans) {
                     agentsBanned.P2.forEach((agent, index) => {
                         if (agent && coords.p2AgentBans[index]) {
                             const assetId = `p2-agent-ban-${index + 1}`;
@@ -932,7 +1174,8 @@
                                 id: assetId,
                                 type: 'agent-icon',
                                 asset: agent,
-                                position: coords.p2AgentBans[index],
+                                position: { x: coords.p2AgentBans[index].x, y: coords.p2AgentBans[index].y },
+                                dimensions: { width: coords.p2AgentBans[index].width, height: coords.p2AgentBans[index].height },
                                 revealed: isRevealed,
                                 player: 'P2',
                                 slot: `ban${index + 1}`
@@ -943,14 +1186,15 @@
                 }
 
                 // P1 Agent Pick
-                if (agentPicks?.P1 && coords.agentPicks.p1) {
+                if (agentPicks?.P1 && coords.agentPicks?.p1) {
                     const assetId = 'p1-agent-pick';
                     const isRevealed = shouldRevealAssets || revealedAssets.has(assetId);
                     assets.push({
                         id: assetId,
                         type: 'agent-banner',
                         asset: agentPicks.P1,
-                        position: coords.agentPicks.p1,
+                        position: { x: coords.agentPicks.p1.x, y: coords.agentPicks.p1.y },
+                        dimensions: { width: coords.agentPicks.p1.width, height: coords.agentPicks.p1.height },
                         revealed: isRevealed,
                         player: 'P1',
                         slot: 'pick'
@@ -959,14 +1203,15 @@
                 }
 
                 // P2 Agent Pick
-                if (agentPicks?.P2 && coords.agentPicks.p2) {
+                if (agentPicks?.P2 && coords.agentPicks?.p2) {
                     const assetId = 'p2-agent-pick';
                     const isRevealed = shouldRevealAssets || revealedAssets.has(assetId);
                     assets.push({
                         id: assetId,
                         type: 'agent-banner',
                         asset: agentPicks.P2,
-                        position: coords.agentPicks.p2,
+                        position: { x: coords.agentPicks.p2.x, y: coords.agentPicks.p2.y },
+                        dimensions: { width: coords.agentPicks.p2.width, height: coords.agentPicks.p2.height },
                         revealed: isRevealed,
                         player: 'P2',
                         slot: 'pick'
@@ -1084,15 +1329,75 @@
             const assetContainer = document.getElementById('asset-container');
             if (!assetContainer) return;
 
-            // Clear existing assets
-            assetContainer.innerHTML = '';
-
-            // Calculate and create new positioned assets
+            // Calculate new positioned assets
             const assets = calculatePositionedAssets(state);
             
+            // Get existing assets to avoid recreating them unnecessarily
+            const existingAssets = new Map();
+            Array.from(assetContainer.children).forEach(element => {
+                if (element.id) {
+                    existingAssets.set(element.id, element);
+                }
+            });
+            
+            // Track which assets should exist
+            const shouldExist = new Set(assets.map(asset => asset.id));
+            
+            // Remove assets that shouldn't exist anymore
+            existingAssets.forEach((element, id) => {
+                if (!shouldExist.has(id)) {
+                    element.remove();
+                    existingAssets.delete(id);
+                }
+            });
+            
             assets.forEach(asset => {
-                const assetElement = createAssetElement(asset);
-                // Apply visual variants for map assets
+                let assetElement = existingAssets.get(asset.id);
+                const isNewAsset = !assetElement;
+                
+                if (isNewAsset) {
+                    // Create new asset element
+                    assetElement = createAssetElement(asset);
+                    assetContainer.appendChild(assetElement);
+                    
+                    // Apply animation for newly revealed map bans, picks, and deciders
+                    if (asset.type === 'map' && asset.slot && (asset.slot.startsWith('ban') || asset.slot === 'pick' || asset.slot === 'decider') && 
+                        asset.revealed && !animatedAssets.has(asset.id)) {
+                        
+                        assetElement.classList.add('revealing');
+                        animatedAssets.add(asset.id);
+                        
+                        // Remove revealing class after animation completes
+                        setTimeout(() => {
+                            assetElement.classList.remove('revealing');
+                        }, 1500);
+                    }
+                } else {
+                    // Update existing asset element
+                    // Update visibility state
+                    if (asset.revealed) {
+                        assetElement.classList.remove('hidden');
+                        assetElement.classList.add('revealed');
+                        
+                        // Apply animation for newly revealed map bans, picks, and deciders (if not already animated)
+                        if (asset.type === 'map' && asset.slot && (asset.slot.startsWith('ban') || asset.slot === 'pick' || asset.slot === 'decider') && 
+                            !animatedAssets.has(asset.id)) {
+                            
+                            assetElement.classList.add('revealing');
+                            animatedAssets.add(asset.id);
+                            
+                            // Remove revealing class after animation completes
+                            setTimeout(() => {
+                                assetElement.classList.remove('revealing');
+                            }, 1500);
+                        }
+                    } else {
+                        assetElement.classList.remove('revealed');
+                        assetElement.classList.add('hidden');
+                    }
+                }
+                
+                // Apply visual variants for map assets (ensure classes are applied)
                 if (asset.type === 'map') {
                     if (asset.slot && asset.slot.startsWith('ban')) {
                         assetElement.classList.add('ban');
@@ -1100,7 +1405,6 @@
                         assetElement.classList.add('decider');
                     }
                 }
-                assetContainer.appendChild(assetElement);
             });
 
             // Update map slot overlays for phase 1
@@ -1132,20 +1436,55 @@
                 }
             }
 
-            // Render overlays
-            overlay.innerHTML = '';
+            // Get existing overlays to avoid recreating them unnecessarily
+            const existingOverlays = new Map();
+            Array.from(overlay.children).forEach(element => {
+                // Extract map name from coordinates by finding matching MAP_SLOT_COORDS
+                const left = parseInt(element.style.left);
+                const top = parseInt(element.style.top);
+                for (const [mapName, coords] of Object.entries(MAP_SLOT_COORDS)) {
+                    if (coords.x === left && coords.y === top) {
+                        existingOverlays.set(mapName, element);
+                        break;
+                    }
+                }
+            });
+
+            // Track which overlays should exist
+            const shouldExist = new Set(mapStates.keys());
+
+            // Remove overlays that shouldn't exist anymore
+            existingOverlays.forEach((element, mapName) => {
+                if (!shouldExist.has(mapName)) {
+                    element.remove();
+                    existingOverlays.delete(mapName);
+                }
+            });
+
+            // Create or update overlays
             for (const [mapName, kind] of mapStates.entries()) {
                 const coords = MAP_SLOT_COORDS[mapName];
                 if (!coords) continue; // unknown map or not on this overlay grid
-                const div = document.createElement('div');
-                div.className = `map-slot-overlay ${kind}`;
-                div.style.left = `${coords.x}px`;
-                div.style.top = `${coords.y}px`;
-                overlay.appendChild(div);
+                
+                let overlayElement = existingOverlays.get(mapName);
+                const isNewOverlay = !overlayElement;
+
+                if (isNewOverlay) {
+                    // Create new overlay element
+                    overlayElement = document.createElement('div');
+                    overlayElement.style.left = `${coords.x}px`;
+                    overlayElement.style.top = `${coords.y}px`;
+                    overlay.appendChild(overlayElement);
+                }
+
+                // Update overlay class and properties
+                overlayElement.className = `map-slot-overlay ${kind}`;
+                
+                // Animation now works automatically via CSS like banned overlays - no JavaScript needed
             }
         }
 
-        // Update tournament state
+        // Update tournament state with phase-aware container classes
         function updateTournamentState(newState) {
             const previousPhase = tournamentState.currentPhase;
             const previousTimerState = tournamentState.timerState;
@@ -1162,8 +1501,9 @@
                 updateTeamNames(newState.teamNames, tournamentState.currentPhase);
             }
 
-            // Update background if phase changed
+            // Update phase-specific container classes and background
             if (newState.currentPhase && newState.currentPhase !== previousPhase) {
+                updatePhaseContainer(newState.currentPhase, previousPhase);
                 updateBackground(newState.currentPhase);
                 // Position team names for new phase
                 positionTeamNames(newState.currentPhase);
@@ -1178,8 +1518,67 @@
             updateTimerDisplay(tournamentState.timerSeconds, tournamentState.timerState);
         }
 
-        // Initialize overlay
+        // Update phase-specific container classes with transitions
+        function updatePhaseContainer(newPhase, previousPhase) {
+            const overlayContent = document.querySelector('.overlay-content');
+            const assetContainer = document.querySelector('.asset-container');
+            if (!overlayContent) return;
+
+            // Remove previous phase classes from both containers
+            overlayContent.classList.remove('phase-map', 'phase-agent', 'phase-conclusion');
+            overlayContent.classList.remove('phase-transition-enter', 'phase-transition-exit');
+            if (assetContainer) {
+                assetContainer.classList.remove('phase-map', 'phase-agent', 'phase-conclusion');
+            }
+
+            // Add transition classes
+            if (previousPhase) {
+                overlayContent.classList.add('phase-transition-exit');
+                setTimeout(() => {
+                    overlayContent.classList.remove('phase-transition-exit');
+                    // Add new phase class to both containers
+                    switch (newPhase) {
+                        case 'MAP_PHASE':
+                            overlayContent.classList.add('phase-map');
+                            if (assetContainer) assetContainer.classList.add('phase-map');
+                            break;
+                        case 'AGENT_PHASE':
+                            overlayContent.classList.add('phase-agent');
+                            if (assetContainer) assetContainer.classList.add('phase-agent');
+                            break;
+                        case 'CONCLUSION':
+                            overlayContent.classList.add('phase-conclusion');
+                            if (assetContainer) assetContainer.classList.add('phase-conclusion');
+                            break;
+                    }
+                    overlayContent.classList.add('phase-transition-enter');
+                    setTimeout(() => {
+                        overlayContent.classList.remove('phase-transition-enter');
+                    }, 800);
+                }, 500);
+            } else {
+                // Initial phase setup without transition
+                switch (newPhase) {
+                    case 'MAP_PHASE':
+                        overlayContent.classList.add('phase-map');
+                        if (assetContainer) assetContainer.classList.add('phase-map');
+                        break;
+                    case 'AGENT_PHASE':
+                        overlayContent.classList.add('phase-agent');
+                        if (assetContainer) assetContainer.classList.add('phase-agent');
+                        break;
+                    case 'CONCLUSION':
+                        overlayContent.classList.add('phase-conclusion');
+                        if (assetContainer) assetContainer.classList.add('phase-conclusion');
+                        break;
+                }
+            }
+        }
+
+        // Initialize overlay with phase container setup
         function initialize() {
+            // Set initial phase container class
+            updatePhaseContainer(tournamentState.currentPhase, null);
             updateBackground(tournamentState.currentPhase);
             updateTeamNames(tournamentState.teamNames, tournamentState.currentPhase);
             updateAssetPositions(tournamentState);

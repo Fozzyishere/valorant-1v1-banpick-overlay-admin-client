@@ -115,10 +115,18 @@ export function TimerPanel() {
         </div>
       )}
 
-      {/* Error Indicator (moved here) */}
+      {/* Error Indicator */}
       {lastError && (
-        <div className="mt-2 bg-tokyo-red/20 border border-tokyo-red text-tokyo-red text-sm rounded p-2">
-          {lastError}
+        <div className="mt-2 bg-tokyo-red/10 border border-tokyo-red/30 rounded-lg p-3">
+          <div className="flex items-start space-x-2">
+            <svg className="w-4 h-4 fill-current text-tokyo-red mt-0.5 flex-shrink-0" viewBox="0 0 20 20">
+              <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"/>
+            </svg>
+            <div className="text-xs text-tokyo-red">
+              <div className="font-medium mb-1">Action Error</div>
+              <div>{lastError}</div>
+            </div>
+          </div>
         </div>
       )}
     </div>
