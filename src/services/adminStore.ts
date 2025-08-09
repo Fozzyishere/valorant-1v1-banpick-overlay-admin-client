@@ -73,7 +73,7 @@ const emitOverlayUpdate = async (state: any) => {
 
 export const useTournamentStore = create<TournamentStore>((set, get) => ({
   // Initial tournament state
-  currentPhase: 'MAP_BAN',
+  currentPhase: 'MAP_PHASE',
   currentPlayer: 'P1',
   actionNumber: 1,
   firstPlayer: 'P1',
@@ -169,6 +169,7 @@ export const useTournamentStore = create<TournamentStore>((set, get) => ({
       const newCurrentPlayer = calculateCurrentPlayer(targetAction, state.firstPlayer);
       const newPhase = getCurrentPhase(targetAction);
       // If phase changes, gate advancement until admin approves
+      // With streamlined phases, transitions happen at: action 9→10 (MAP_PHASE→AGENT_PHASE)
       if (newPhase !== state.currentPhase) {
         const gated: TournamentStore = {
           ...state,
@@ -606,7 +607,7 @@ export const useTournamentStore = create<TournamentStore>((set, get) => ({
       
       return {
         // Reset tournament state
-        currentPhase: 'MAP_BAN',
+        currentPhase: 'MAP_PHASE',
         currentPlayer: null,
         actionNumber: 1,
         phaseAdvancePending: null,

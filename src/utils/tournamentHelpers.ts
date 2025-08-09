@@ -46,15 +46,13 @@ export function calculateCurrentPlayer(actionNumber: number, firstPlayer: Player
 
 /**
  * Get current tournament phase based on action number
+ * Streamlined to 3 phases: MAP_PHASE (1-9), AGENT_PHASE (10-17), CONCLUSION
  */
 export function getCurrentPhase(actionNumber: number): TournamentPhase {
-  if (actionNumber < 1) return 'MAP_BAN';
-  if (actionNumber <= 6) return 'MAP_BAN';      // Actions 1-6: Map bans
-  if (actionNumber <= 8) return 'MAP_PICK';     // Actions 7-8: Map picks
-  if (actionNumber === 9) return 'MAP_PICK';    // Action 9: Decider (still map phase)
-  if (actionNumber <= 15) return 'AGENT_BAN';   // Actions 10-15: Agent bans
-  if (actionNumber <= 17) return 'AGENT_PICK';  // Actions 16-17: Agent picks
-  return 'CONCLUSION';                          // After action 17
+  if (actionNumber < 1) return 'MAP_PHASE';
+  if (actionNumber <= 9) return 'MAP_PHASE';     // Actions 1-9: Map bans, picks, and decider
+  if (actionNumber <= 17) return 'AGENT_PHASE';  // Actions 10-17: Agent bans and picks
+  return 'CONCLUSION';                           // After action 17
 }
 
 /**
@@ -197,11 +195,9 @@ export function getPhaseStartAction(actionNumber: number): number {
   const phase = getCurrentPhase(actionNumber);
   
   switch (phase) {
-    case 'MAP_BAN': return 1;      // Actions 1-6
-    case 'MAP_PICK': return 7;     // Actions 7-9
-    case 'AGENT_BAN': return 10;   // Actions 10-15
-    case 'AGENT_PICK': return 16;  // Actions 16-17
-    case 'CONCLUSION': return 17;  // Tournament complete
+    case 'MAP_PHASE': return 1;      // Actions 1-9: Map bans, picks, and decider
+    case 'AGENT_PHASE': return 10;   // Actions 10-17: Agent bans and picks
+    case 'CONCLUSION': return 17;    // Tournament complete
     default: return 1;
   }
 }

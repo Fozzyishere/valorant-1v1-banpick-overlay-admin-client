@@ -205,6 +205,8 @@
             object-position: center center;
         }
 
+        /* Per-phase box sizes are now applied inline; no global overrides here */
+
         /* Map visual variants */
         .positioned-asset.map.ban {
             filter: grayscale(100%) brightness(0.85) contrast(0.95);
@@ -343,7 +345,7 @@
     <script>
         // Tournament state management
         let tournamentState = {
-            currentPhase: 'MAP_BAN',
+            currentPhase: 'MAP_PHASE',
             teamNames: { P1: 'Player 1', P2: 'Player 2' },
             actionNumber: 1,
             mapsBanned: { P1: [], P2: [] },
@@ -383,7 +385,7 @@
             retryAttempts.clear();
         }
 
-        // Asset positioning coordinates
+        // Phase-specific coordinate system with dimensions and styling data
         // Map slot coordinates for baked-in Phase 1 grid (top-left x,y)
         const MAP_SLOT_COORDS = {
             abyss:   { x: 217,  y: 464 },
@@ -399,91 +401,98 @@
             sunset:  { x: 217,  y: 762 },
             corrode: { x: 519,  y: 763 },
         };
-        const PHASE1_COORDINATES = {
+
+        // Phase-specific configurations with complete layout data
+        const MAP_PHASE_COORDINATES = {
             teamNames: {
-                p1: { x: 342, y: 159 },
-                p2: { x: 1572, y: 159 }
+                p1: { x: 342, y: 159, fontSize: '48px' },
+                p2: { x: 1572, y: 159, fontSize: '48px' }
             },
             p1MapBans: [
-                { x: 229, y: 325 },
-                { x: 384, y: 325 },
-                { x: 538, y: 325 }
+                { x: 229, y: 325, width: 144, height: 95 },
+                { x: 384, y: 325, width: 144, height: 95 },
+                { x: 538, y: 325, width: 144, height: 95 }
             ],
             p2MapBans: [
-                { x: 1546, y: 325 },
-                { x: 1392, y: 325 },
-                { x: 1237, y: 325 }
+                { x: 1546, y: 325, width: 144, height: 95 },
+                { x: 1392, y: 325, width: 144, height: 95 },
+                { x: 1237, y: 325, width: 144, height: 95 }
             ],
             mapPicks: {
-                p1: { x: 734, y: 325 },
-                p2: { x: 1043, y: 325 },
-                decider: { x: 888, y: 325 }
+                p1: { x: 630, y: 480, width: 144, height: 95 },
+                p2: { x: 1021, y: 480, width: 144, height: 95 },
+                decider: { x: 822, y: 693, width: 144, height: 95 }
             }
         };
 
-        const PHASE2_COORDINATES = {
+        const AGENT_PHASE_COORDINATES = {
             teamNames: {
-                p1: { x: 342, y: 159 },
-                p2: { x: 1572, y: 159 }
+                p1: { x: 350, y: 170, fontSize: '46px' },
+                p2: { x: 1565, y: 170, fontSize: '46px' }
             },
             p1AgentBans: [
-                { x: 229, y: 313 },
-                { x: 335, y: 313 },
-                { x: 441, y: 313 }
+                { x: 229, y: 313, width: 93, height: 93 },
+                { x: 335, y: 313, width: 93, height: 93 },
+                { x: 441, y: 313, width: 93, height: 93 }
             ],
             p2AgentBans: [
-                { x: 1596, y: 313 },
-                { x: 1490, y: 313 },
-                { x: 1384, y: 313 }
+                { x: 1596, y: 313, width: 93, height: 93 },
+                { x: 1490, y: 313, width: 93, height: 93 },
+                { x: 1384, y: 313, width: 93, height: 93 }
             ],
             agentPicks: {
-                p1: { x: 211, y: 436 },
-                p2: { x: 1485, y: 436 }
+                p1: { x: 344, y: 434, width: 223, height: 584 },
+                p2: { x: 1365, y: 434, width: 223, height: 584 }
             }
         };
 
         const CONCLUSION_COORDINATES = {
             teamNames: {
-                p1: { x: 342, y: 159 },
-                p2: { x: 1572, y: 159 }
+                p1: { x: 342, y: 159, fontSize: '50px' },
+                p2: { x: 1572, y: 159, fontSize: '50px' }
             },
             p1MapBans: [
-                { x: 229, y: 313 },
-                { x: 384, y: 313 },
-                { x: 538, y: 313 }
+                { x: 229, y: 313, width: 120, height: 80 },
+                { x: 384, y: 313, width: 120, height: 80 },
+                { x: 538, y: 313, width: 120, height: 80 }
             ],
             p2MapBans: [
-                { x: 1546, y: 313 },
-                { x: 1392, y: 313 },
-                { x: 1237, y: 313 }
+                { x: 1546, y: 313, width: 120, height: 80 },
+                { x: 1392, y: 313, width: 120, height: 80 },
+                { x: 1237, y: 313, width: 120, height: 80 }
             ],
             mapPicks: {
-                p1: { x: 604, y: 479 },
-                p2: { x: 1009, y: 479 },
-                decider: { x: 604, y: 682 }
+                p1: { x: 604, y: 479, width: 277, height: 156 },
+                p2: { x: 1009, y: 479, width: 277, height: 156 },
+                decider: { x: 604, y: 682, width: 277, height: 156 }
             },
             p1AgentBans: [
-                { x: 621, y: 909 },
-                { x: 727, y: 909 },
-                { x: 833, y: 909 }
+                { x: 621, y: 909, width: 80, height: 80 },
+                { x: 727, y: 909, width: 80, height: 80 },
+                { x: 833, y: 909, width: 80, height: 80 }
             ],
             p2AgentBans: [
-                { x: 1215, y: 909 },
-                { x: 1109, y: 909 },
-                { x: 1003, y: 909 }
+                { x: 1215, y: 909, width: 80, height: 80 },
+                { x: 1109, y: 909, width: 80, height: 80 },
+                { x: 1003, y: 909, width: 80, height: 80 }
             ],
             agentPicks: {
-                p1: { x: 211, y: 436 },
-                p2: { x: 1366, y: 436 }
+                p1: { x: 211, y: 436, width: 200, height: 520 },
+                p2: { x: 1366, y: 436, width: 200, height: 520 }
             }
         };
 
-        // Phase background mapping
+        // Phase configuration lookup
+        const PHASE_COORDINATES = {
+            'MAP_PHASE': MAP_PHASE_COORDINATES,
+            'AGENT_PHASE': AGENT_PHASE_COORDINATES,
+            'CONCLUSION': CONCLUSION_COORDINATES
+        };
+
+        // Phase background mapping - streamlined to 3 phases
         const phaseBackgrounds = {
-            'MAP_BAN': 'phase-1-bg',
-            'MAP_PICK': 'phase-1-bg',
-            'AGENT_BAN': 'phase-2-bg',
-            'AGENT_PICK': 'phase-2-bg',
+            'MAP_PHASE': 'phase-1-bg',
+            'AGENT_PHASE': 'phase-2-bg',
             'CONCLUSION': 'conclusion-bg'
         };
 
@@ -600,7 +609,7 @@
             let coords;
             if (currentPhase === 'CONCLUSION') {
                 coords = CONCLUSION_COORDINATES.teamNames;
-            } else if (currentPhase === 'AGENT_BAN' || currentPhase === 'AGENT_PICK') {
+            } else if (currentPhase === 'AGENT_PHASE') {
                 coords = PHASE2_COORDINATES.teamNames;
             } else {
                 coords = PHASE1_COORDINATES.teamNames;
@@ -651,8 +660,14 @@
                 fallback.style.width = '223px';
                 fallback.style.height = '584px';
             } else if (asset.type === 'map') {
-                fallback.style.width = '144px';
-                fallback.style.height = '95px';
+                // Default small map slot; enlarge only for pick/decider during conclusion
+                if (tournamentState.currentPhase === 'CONCLUSION' && (asset.slot === 'pick' || asset.slot === 'decider')) {
+                    fallback.style.width = '277px';
+                    fallback.style.height = '156px';
+                } else {
+                    fallback.style.width = '144px';
+                    fallback.style.height = '95px';
+                }
                 fallback.style.objectFit = 'cover';
                 fallback.style.objectPosition = 'center';
             } else {
@@ -707,6 +722,29 @@
             img.src = getAssetFilePath(asset.asset, asset.type);
             img.style.left = `${asset.position.x}px`;
             img.style.top = `${asset.position.y}px`;
+            // Phase-aware sizing for maps and agent banners
+            if (asset.type === 'map') {
+                // Default small map slot
+                let w = 144, h = 95;
+                // Enlarge only when current phase uses large pick/decider boxes
+                if (tournamentState.currentPhase === 'CONCLUSION' && (asset.slot === 'pick' || asset.slot === 'decider')) {
+                    w = 277; h = 156;
+                }
+                img.style.width = `${w}px`;
+                img.style.height = `${h}px`;
+                img.style.objectFit = 'cover';
+                img.style.objectPosition = 'center';
+            } else if (asset.type === 'agent-banner') {
+                img.style.width = '223px';
+                img.style.height = '584px';
+                img.style.objectFit = 'cover';
+                img.style.objectPosition = 'center';
+            } else if (asset.type === 'agent-icon') {
+                img.style.width = '93px';
+                img.style.height = '93px';
+                img.style.objectFit = 'contain';
+                img.style.objectPosition = 'center';
+            }
             img.alt = `${asset.player} ${asset.slot} - ${asset.asset}`;
             
             // Enhanced error handling with retry logic
@@ -766,7 +804,7 @@
             const shouldRevealAssets = timerState === 'finished' || currentPhase === 'CONCLUSION';
 
             // Phase 1 and Conclusion: Map assets
-            if (currentPhase === 'MAP_BAN' || currentPhase === 'MAP_PICK' || currentPhase === 'CONCLUSION') {
+            if (currentPhase === 'MAP_PHASE' || currentPhase === 'CONCLUSION') {
                 const coords = currentPhase === 'CONCLUSION' ? CONCLUSION_COORDINATES : PHASE1_COORDINATES;
 
                 // P1 Map Bans
@@ -861,7 +899,7 @@
             }
 
             // Phase 2 and Conclusion: Agent assets
-            if (currentPhase === 'AGENT_BAN' || currentPhase === 'AGENT_PICK' || currentPhase === 'CONCLUSION') {
+            if (currentPhase === 'AGENT_PHASE' || currentPhase === 'CONCLUSION') {
                 const coords = currentPhase === 'CONCLUSION' ? CONCLUSION_COORDINATES : PHASE2_COORDINATES;
 
                 // P1 Agent Bans
@@ -1074,8 +1112,8 @@
             const overlay = document.getElementById('map-overlay-container');
             if (!overlay) return;
 
-            // Only active in map phases
-            if (!(state.currentPhase === 'MAP_BAN' || state.currentPhase === 'MAP_PICK')) {
+            // Only active in map phase
+            if (state.currentPhase !== 'MAP_PHASE') {
                 overlay.innerHTML = '';
                 return;
             }
@@ -1186,7 +1224,7 @@
 
         // Test function for development
         window.testPhaseTransition = function() {
-            const phases = ['MAP_BAN', 'MAP_PICK', 'AGENT_BAN', 'AGENT_PICK', 'CONCLUSION'];
+            const phases = ['MAP_PHASE', 'AGENT_PHASE', 'CONCLUSION'];
             let currentIndex = 0;
             
             setInterval(() => {
@@ -1202,7 +1240,7 @@
         window.testStaggeredReveal = function() {
             // Mock some assets for testing
             updateTournamentState({
-                currentPhase: 'MAP_BAN',
+                currentPhase: 'MAP_PHASE',
                 mapsBanned: { 
                     P1: ['ascent', 'bind', 'haven'], 
                     P2: ['lotus', 'pearl', 'split'] 

@@ -2,7 +2,7 @@
 
 // Core tournament types
 export type Player = 'P1' | 'P2';
-export type TournamentPhase = 'MAP_BAN' | 'MAP_PICK' | 'AGENT_BAN' | 'AGENT_PICK' | 'CONCLUSION';
+export type TournamentPhase = 'MAP_PHASE' | 'AGENT_PHASE' | 'CONCLUSION';
 export type ActionType = 'MAP_BAN' | 'MAP_PICK' | 'DECIDER' | 'AGENT_BAN' | 'AGENT_PICK';
 
 // Timer states
