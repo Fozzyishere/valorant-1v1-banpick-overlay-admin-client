@@ -12,7 +12,10 @@ export function InformationPanel() {
     agentPicks,
     pendingSelection,
     revealedActions,
+    eventStarted,
+    timerState,
     attemptSelection,
+    setError,
     
   } = useTournamentStore();
 
@@ -30,7 +33,24 @@ export function InformationPanel() {
   const isAgentActive = isAgentPhase(actionNumber);
 
   const handleAssetClick = (assetName: string) => {
-    // Open non-blocking confirmation instead of blocking window.confirm
+    // Enforce gating before showing confirmation
+    if (!eventStarted) {
+      setError('Event not started. Click START EVENT to begin turn 1.');
+      return;
+    }
+    if (timerState === 'ready') {
+      setError('Start the timer before selecting a result for this turn.');
+      return;
+    }
+    if (revealedActions.has(actionNumber)) {
+      setError('Selection for this turn already confirmed.');
+      return;
+    }
+    if (pendingSelection) {
+      setError('A selection is already pending. Reset the turn to change it.');
+      return;
+    }
+    // Open non-blocking confirmation
     setConfirmAsset(assetName);
   };
 
