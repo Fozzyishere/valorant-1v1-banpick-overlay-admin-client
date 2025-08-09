@@ -78,6 +78,8 @@ export const useTournamentStore = create<TournamentStore>((set, get) => ({
   actionNumber: 1,
   firstPlayer: 'P1',
   eventStarted: false,
+  // Manual phase advancement gating
+  phaseAdvancePending: null,
   
   // Team configuration
   teamNames: {
@@ -152,22 +154,77 @@ export const useTournamentStore = create<TournamentStore>((set, get) => ({
       const targetAction = state.actionNumber + 1;
       // Don't advance beyond action 17
       if (targetAction > 17) {
+        // Gate entering CONCLUSION until manual advance
+        const gated: TournamentStore = {
+          ...state,
+          phaseAdvancePending: 'CONCLUSION',
+          pendingSelection: null,
+          timerState: 'ready',
+          timerSeconds: 3,
+          lastError: null
+        } as TournamentStore;
+        emitOverlayUpdate(gated);
+        return gated;
+      }
+      const newCurrentPlayer = calculateCurrentPlayer(targetAction, state.firstPlayer);
+      const newPhase = getCurrentPhase(targetAction);
+      // If phase changes, gate advancement until admin approves
+      if (newPhase !== state.currentPhase) {
+        const gated: TournamentStore = {
+          ...state,
+          phaseAdvancePending: newPhase,
+          pendingSelection: null,
+          timerState: 'ready',
+          timerSeconds: 3,
+          lastError: null
+        } as TournamentStore;
+        emitOverlayUpdate(gated);
+        return gated;
+      }
+      // Same-phase auto-advance as usual
+      const adv: TournamentStore = {
+        ...state,
+        actionNumber: targetAction,
+        currentPlayer: newCurrentPlayer,
+        currentPhase: newPhase,
+        pendingSelection: null,
+        timerState: 'ready',
+        timerSeconds: 3,
+        lastError: null
+      } as TournamentStore;
+      emitOverlayUpdate(adv);
+      return adv;
+    });
+  },
+
+  // Manual phase advancement when gated
+  advancePhase: () => {
+    set((state) => {
+      if (!state.phaseAdvancePending) return state;
+      const targetAction = state.actionNumber + 1;
+      // Entering CONCLUSION: no further actions
+      if (state.phaseAdvancePending === 'CONCLUSION' || targetAction > 17) {
         const finished: TournamentStore = {
           ...state,
           currentPhase: 'CONCLUSION',
           currentPlayer: null,
+          phaseAdvancePending: null,
+          pendingSelection: null,
+          timerState: 'ready',
+          timerSeconds: 3,
           lastError: null
         } as TournamentStore;
         emitOverlayUpdate(finished);
         return finished;
       }
       const newCurrentPlayer = calculateCurrentPlayer(targetAction, state.firstPlayer);
-      const newPhase = getCurrentPhase(targetAction);
+      const newPhase = state.phaseAdvancePending;
       const adv: TournamentStore = {
         ...state,
         actionNumber: targetAction,
         currentPlayer: newCurrentPlayer,
         currentPhase: newPhase,
+        phaseAdvancePending: null,
         pendingSelection: null,
         timerState: 'ready',
         timerSeconds: 3,
@@ -189,6 +246,7 @@ export const useTournamentStore = create<TournamentStore>((set, get) => ({
         actionNumber: 1,
         currentPlayer: newCurrentPlayer,
         currentPhase: newPhase,
+        phaseAdvancePending: null,
         eventStarted: true,
         // Clear all tournament data
         mapsBanned: [],
@@ -360,6 +418,10 @@ export const useTournamentStore = create<TournamentStore>((set, get) => ({
   // Selection attempt with gating rules
   attemptSelection: (assetName: string) => {
     set((state) => {
+      // Phase advance pending blocks further selections
+      if (state.phaseAdvancePending) {
+        return { ...state, lastError: 'Next phase is ready. Click ADVANCE PHASE to continue.' };
+      }
       // Event must be started
       if (!state.eventStarted) {
         return { ...state, lastError: 'Event not started. Click START EVENT to begin turn 1.' };
@@ -424,6 +486,10 @@ export const useTournamentStore = create<TournamentStore>((set, get) => ({
   // Timer controls (independent system)
   startTimer: () => {
     set((state) => {
+      // Block if awaiting manual phase advancement
+      if (state.phaseAdvancePending) {
+        return { ...state, lastError: 'Next phase is ready. Click ADVANCE PHASE to continue.' };
+      }
       // Block if event hasn't started
       if (!state.eventStarted) {
         return { ...state, lastError: 'Event not started. Click START EVENT to begin turn 1.' };
@@ -543,6 +609,7 @@ export const useTournamentStore = create<TournamentStore>((set, get) => ({
         currentPhase: 'MAP_BAN',
         currentPlayer: null,
         actionNumber: 1,
+        phaseAdvancePending: null,
         
         // Keep team names and first player
         teamNames: state.teamNames,

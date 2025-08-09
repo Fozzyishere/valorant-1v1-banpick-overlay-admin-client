@@ -38,11 +38,21 @@
         }
 
         .background-image {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 1920px;
+            height: 1080px;
+            object-fit: none; /* no scaling, use native pixels */
+            object-position: left top; /* anchor at top-left per spec */
             transition: opacity 0.5s ease-in-out;
+            will-change: opacity;
         }
+
+/* Enhance fade duration specifically during phase 1 -> phase 2 swap */
+.background-container.crossfade .background-image {
+    transition: opacity 0.8s ease-in-out;
+}
 
         .overlay-content {
             position: absolute;
@@ -70,12 +80,10 @@
 
         .team-name.player1 {
             text-align: left;
-            animation: slide-in-left 0.8s ease-out;
         }
 
         .team-name.player2 {
             text-align: right;
-            animation: slide-in-right 0.8s ease-out;
             /* Align right edge to provided X coordinate using translate */
             transform: translateX(-100%);
         }
@@ -120,6 +128,38 @@
             pointer-events: none;
         }
 
+        /* Map slot overlays for Phase 1 baked-in map grid */
+        .map-overlay-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 4; /* above assets to ensure visible highlight */
+            pointer-events: none;
+        }
+        .map-slot-overlay {
+            position: absolute;
+            width: 277px;
+            height: 127px;
+            border-radius: 0px;
+            box-sizing: border-box;
+            transition: opacity 0.2s ease-in-out, box-shadow 0.2s ease-in-out, background 0.2s ease-in-out;
+        }
+        .map-slot-overlay.ban {
+            background: rgba(0, 0, 0, 0.55);
+        }
+        .map-slot-overlay.pick {
+            background: rgba(0, 255, 200, 0.06);
+            border: 2px solid rgba(0, 255, 200, 0.85);
+            box-shadow: 0 0 8px rgba(0, 255, 200, 0.7), 0 0 14px rgba(0, 255, 200, 0.45);
+        }
+        .map-slot-overlay.decider {
+            background: rgba(248, 235, 126, 0.08);
+            border: 2px solid rgba(248, 235, 126, 0.95);
+            box-shadow: 0 0 8px rgba(248, 235, 126, 0.85), 0 0 14px rgba(248, 235, 126, 0.55);
+        }
+
         .positioned-asset {
             position: absolute;
             transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
@@ -146,9 +186,13 @@
         }
 
         .positioned-asset.agent-banner {
-            max-width: 200px;
-            max-height: 150px;
+            width: 223px;
+            height: 584px;
+            max-width: none;
+            max-height: none;
             border-radius: 0;
+            object-fit: cover; /* fill box and crop overflow to maintain aspect */
+            object-position: center center; /* crop focus center */
         }
 
         .positioned-asset.map {
@@ -173,7 +217,11 @@
         }
 
         .positioned-asset.agent-icon {
+            width: 93px;
+            height: 93px;
             border-radius: 0;
+            object-fit: contain;
+            object-position: center center;
         }
 
         .positioned-asset.fallback {
@@ -276,9 +324,9 @@
 </head>
 <body>
     <div class="background-container">
-        <img id="phase-1-bg" class="background-image visible" src="/phase-1-map.png" alt="Map Phase Background" />
-        <img id="phase-2-bg" class="background-image hidden" src="/phase-2-agent.png" alt="Agent Phase Background" />
-        <img id="conclusion-bg" class="background-image hidden" src="/conclusion.png" alt="Conclusion Background" />
+        <img id="phase-1-bg" class="background-image visible" src="/img/phase-1-map.png" alt="Map Phase Background" />
+        <img id="phase-2-bg" class="background-image hidden" src="/img/phase-2-agent.png" alt="Agent Phase Background" />
+        <img id="conclusion-bg" class="background-image hidden" src="/img/conclusion.png" alt="Conclusion Background" />
     </div>
 
     <div class="overlay-content">
@@ -290,6 +338,7 @@
     <div class="asset-container" id="asset-container">
         <!-- Tournament assets will be positioned here dynamically -->
     </div>
+    <div class="map-overlay-container" id="map-overlay-container"></div>
 
     <script>
         // Tournament state management
@@ -316,7 +365,40 @@
         const MAX_RETRY_ATTEMPTS = 3;
         const RETRY_DELAY = 2000; // 2 seconds
 
+        // Helper: detect a fresh tournament start state for clarity
+        function isTournamentAtInitialState(state) {
+            const noMapBans = !(state.mapsBanned?.P1?.length) && !(state.mapsBanned?.P2?.length);
+            const noMapPicks = !state.mapsPicked?.P1 && !state.mapsPicked?.P2;
+            const noDecider = !state.deciderMap;
+            const noAgentBans = !(state.agentsBanned?.P1?.length) && !(state.agentsBanned?.P2?.length);
+            const noAgentPicks = !state.agentPicks?.P1 && !state.agentPicks?.P2;
+            return state.actionNumber === 1 && noMapBans && noMapPicks && noDecider && noAgentBans && noAgentPicks;
+        }
+
+        // Helper: clear all overlay asset/retry state
+        function clearAllAssetState() {
+            pendingAssets.clear();
+            revealedAssets.clear();
+            failedAssets.clear();
+            retryAttempts.clear();
+        }
+
         // Asset positioning coordinates
+        // Map slot coordinates for baked-in Phase 1 grid (top-left x,y)
+        const MAP_SLOT_COORDS = {
+            abyss:   { x: 217,  y: 464 },
+            ascent:  { x: 518,  y: 465 },
+            bind:    { x: 821,  y: 464 },
+            breeze:  { x: 1123, y: 464 },
+            fracture:{ x: 1426, y: 464 },
+            split:   { x: 1425, y: 613 },
+            pearl:   { x: 1123, y: 613 },
+            lotus:   { x: 821,  y: 613 },
+            icebox:  { x: 518,  y: 613 },
+            haven:   { x: 216,  y: 613 },
+            sunset:  { x: 217,  y: 762 },
+            corrode: { x: 519,  y: 763 },
+        };
         const PHASE1_COORDINATES = {
             teamNames: {
                 p1: { x: 342, y: 159 },
@@ -408,25 +490,88 @@
         // Phase display text mapping (no longer used)
         const phaseDisplayText = {};
 
-        // Update background based on current phase
-        function updateBackground(phase) {
-            // Hide all backgrounds
-            document.querySelectorAll('.background-image').forEach(img => {
-                img.classList.remove('visible');
-                img.classList.add('hidden');
-            });
+        // Track which background is currently visible to avoid blank transitions
+        let currentBackgroundId = 'phase-1-bg';
 
-            // Show current phase background
-            const activeBackground = phaseBackgrounds[phase];
-            if (activeBackground) {
-                const bgElement = document.getElementById(activeBackground);
-                if (bgElement) {
-                    bgElement.classList.remove('hidden');
-                    bgElement.classList.add('visible');
+        // Update background based on current phase (preload-safe)
+        function updateBackground(phase) {
+            const targetId = phaseBackgrounds[phase];
+            if (!targetId || targetId === currentBackgroundId) return;
+
+            const targetEl = document.getElementById(targetId);
+            if (!targetEl) return;
+
+            const switchToTarget = () => {
+                // Show target first
+                targetEl.classList.remove('hidden');
+                targetEl.classList.add('visible');
+                // Then hide others
+                document.querySelectorAll('.background-image').forEach(img => {
+                    if (img.id !== targetId) {
+                        img.classList.remove('visible');
+                        img.classList.add('hidden');
+                    }
+                });
+                currentBackgroundId = targetId;
+            };
+
+            const imgEl = targetEl;
+    const bgContainer = document.querySelector('.background-container');
+    const shouldCrossfade = currentBackgroundId === 'phase-1-bg' && targetId === 'phase-2-bg';
+    if (bgContainer && shouldCrossfade) {
+        bgContainer.classList.add('crossfade');
+    }
+            // If already loaded, or can be decoded, switch when ready
+            if (imgEl instanceof HTMLImageElement) {
+                if (imgEl.complete && imgEl.naturalWidth > 0) {
+                    switchToTarget();
+                    if (bgContainer && shouldCrossfade) {
+                        setTimeout(() => bgContainer.classList.remove('crossfade'), 900);
+                    }
+                    return;
+                }
+                if (typeof imgEl.decode === 'function') {
+                    imgEl.decode().then(() => {
+                        switchToTarget();
+                        if (bgContainer && shouldCrossfade) {
+                            setTimeout(() => bgContainer.classList.remove('crossfade'), 900);
+                        }
+                    }).catch(() => {
+                        // Fallback to load handler
+                        const onLoad = () => {
+                            imgEl.removeEventListener('load', onLoad);
+                            switchToTarget();
+                            if (bgContainer && shouldCrossfade) {
+                                setTimeout(() => bgContainer.classList.remove('crossfade'), 900);
+                            }
+                        };
+                        imgEl.addEventListener('load', onLoad);
+                    });
+                    return;
                 }
             }
 
-            // Phase indicator removed
+            // Otherwise, wait for load; keep current visible to avoid white screen
+            if (imgEl instanceof HTMLImageElement) {
+                const onLoad = () => {
+                    imgEl.removeEventListener('load', onLoad);
+                    switchToTarget();
+            if (bgContainer && shouldCrossfade) {
+                setTimeout(() => bgContainer.classList.remove('crossfade'), 900);
+            }
+                };
+                imgEl.addEventListener('load', onLoad);
+                // Trigger load by reassigning src if needed
+                if (!imgEl.src) {
+                    imgEl.src = imgEl.getAttribute('src') || '';
+                }
+            } else {
+                // Non-image element fallback
+                switchToTarget();
+        if (bgContainer && shouldCrossfade) {
+            setTimeout(() => bgContainer.classList.remove('crossfade'), 900);
+        }
+            }
         }
 
         // Update team names with positioning
@@ -503,8 +648,8 @@
             fallback.style.top = `${asset.position.y}px`;
             // Size per asset type
             if (asset.type === 'agent-banner') {
-                fallback.style.width = '200px';
-                fallback.style.height = '150px';
+                fallback.style.width = '223px';
+                fallback.style.height = '584px';
             } else if (asset.type === 'map') {
                 fallback.style.width = '144px';
                 fallback.style.height = '95px';
@@ -835,10 +980,8 @@
         // Reset asset reveal state for new phases
         function resetAssetRevealState() {
             pendingAssets.clear();
-            // Keep previously revealed assets for conclusion phase
-            if (tournamentState.currentPhase !== 'CONCLUSION') {
-                revealedAssets.clear();
-            }
+            // Preserve revealed assets across phase transitions to prevent them from disappearing
+            // Do not clear revealedAssets here; existing assets should remain visible once revealed
         }
 
         // Error recovery functions
@@ -921,6 +1064,47 @@
                 }
                 assetContainer.appendChild(assetElement);
             });
+
+            // Update map slot overlays for phase 1
+            updateMapSlotOverlays(state);
+        }
+
+        // Build and render map slot overlays based on revealed map actions
+        function updateMapSlotOverlays(state) {
+            const overlay = document.getElementById('map-overlay-container');
+            if (!overlay) return;
+
+            // Only active in map phases
+            if (!(state.currentPhase === 'MAP_BAN' || state.currentPhase === 'MAP_PICK')) {
+                overlay.innerHTML = '';
+                return;
+            }
+
+            // Determine which maps are banned/picked/decider and revealed
+            const assets = calculatePositionedAssets(state);
+            const mapStates = new Map(); // mapName -> 'ban' | 'pick' | 'decider'
+            for (const a of assets) {
+                if (a.type !== 'map' || !a.revealed) continue;
+                const kind = a.slot && a.slot.startsWith('ban') ? 'ban' : (a.slot === 'decider' ? 'decider' : (a.slot === 'pick' ? 'pick' : null));
+                if (!kind) continue;
+                // Prefer decider over pick, pick over ban
+                const prev = mapStates.get(a.asset);
+                if (!prev || (prev === 'ban' && (kind === 'pick' || kind === 'decider')) || (prev === 'pick' && kind === 'decider')) {
+                    mapStates.set(a.asset, kind);
+                }
+            }
+
+            // Render overlays
+            overlay.innerHTML = '';
+            for (const [mapName, kind] of mapStates.entries()) {
+                const coords = MAP_SLOT_COORDS[mapName];
+                if (!coords) continue; // unknown map or not on this overlay grid
+                const div = document.createElement('div');
+                div.className = `map-slot-overlay ${kind}`;
+                div.style.left = `${coords.x}px`;
+                div.style.top = `${coords.y}px`;
+                overlay.appendChild(div);
+            }
         }
 
         // Update tournament state
@@ -928,6 +1112,12 @@
             const previousPhase = tournamentState.currentPhase;
             const previousTimerState = tournamentState.timerState;
             tournamentState = { ...tournamentState, ...newState };
+
+            // Detect fresh tournament start and fully reset reveal state
+            const isFreshStart = isTournamentAtInitialState(tournamentState);
+            if (isFreshStart) {
+                clearAllAssetState();
+            }
 
             // Update team names if changed
             if (newState.teamNames) {
@@ -939,20 +1129,8 @@
                 updateBackground(newState.currentPhase);
                 // Position team names for new phase
                 positionTeamNames(newState.currentPhase);
-                // Reset asset reveal state for new phase
+                // Reset asset reveal state for new phase (preserves revealed assets)
                 resetAssetRevealState();
-                
-                // Add phase transition animation
-                const overlayContent = document.querySelector('.overlay-content');
-                const assetContainer = document.getElementById('asset-container');
-                if (overlayContent) {
-                    overlayContent.classList.add('phase-transition');
-                    setTimeout(() => overlayContent.classList.remove('phase-transition'), 1000);
-                }
-                if (assetContainer) {
-                    assetContainer.classList.add('phase-transition');
-                    setTimeout(() => assetContainer.classList.remove('phase-transition'), 1000);
-                }
             }
 
             // With T7 gating, overlay renders strictly from revealed flags
@@ -968,6 +1146,7 @@
             updateTeamNames(tournamentState.teamNames, tournamentState.currentPhase);
             updateAssetPositions(tournamentState);
             updateTimerDisplay(tournamentState.timerSeconds, tournamentState.timerState);
+            updateMapSlotOverlays(tournamentState);
         }
 
         // Tauri event listener setup (when available)

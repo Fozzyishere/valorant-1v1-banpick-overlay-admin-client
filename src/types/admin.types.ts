@@ -43,6 +43,8 @@ export interface TournamentState {
   actionNumber: number; // 1-17 total actions
   firstPlayer: Player; // Tournament starter (P1 or P2)
   eventStarted?: boolean; // Must be started before selections
+  // Manual phase advancement gating
+  phaseAdvancePending: TournamentPhase | null;
   
   // Team configuration
   teamNames: {
@@ -90,6 +92,7 @@ export interface TournamentActions {
   nextTurn: () => void; // deprecated
   prevTurn: () => void; // deprecated
   autoAdvanceTurn: () => void; // internal: advance after timed confirmation
+  advancePhase: () => void; // manual: proceed to next phase when pending
   resetTurn: () => void;
   
   // Asset selection with OBS timing flow

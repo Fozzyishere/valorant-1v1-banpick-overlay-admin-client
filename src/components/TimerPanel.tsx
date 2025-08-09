@@ -12,7 +12,9 @@ export function TimerPanel() {
     firstPlayer,
     eventStarted,
     startEvent,
-    lastError
+    lastError,
+    phaseAdvancePending,
+    advancePhase
   } = useTournamentStore();
 
   const formatTime = (seconds: number): string => {
@@ -94,6 +96,24 @@ export function TimerPanel() {
           {eventStarted ? 'EVENT STARTED' : 'START EVENT'}
         </button>
       </div>
+
+      {/* Manual Phase Advance */}
+      {phaseAdvancePending && (
+        <div className="mt-2">
+          <div className="text-xs text-tokyo-text-dim mb-1">Next Phase Ready:</div>
+          <div className="flex gap-2">
+            <div className="flex-1 px-2 py-1 bg-tokyo-surface-light border border-tokyo-border-light rounded text-xs text-tokyo-text capitalize">
+              {phaseAdvancePending.toLowerCase().replace('_', ' ')}
+            </div>
+            <button
+              onClick={advancePhase}
+              className="px-3 py-1.5 bg-tokyo-accent hover:bg-tokyo-blue text-white rounded text-sm font-medium transition-colors"
+            >
+              ADVANCE PHASE
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Error Indicator (moved here) */}
       {lastError && (
