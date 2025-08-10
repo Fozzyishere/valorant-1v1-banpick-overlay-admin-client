@@ -14,7 +14,8 @@ export function TimerPanel() {
     startEvent,
     lastError,
     phaseAdvancePending,
-    advancePhase
+    advancePhase,
+    currentPhase
   } = useTournamentStore();
 
   const formatTime = (seconds: number): string => {
@@ -34,6 +35,22 @@ export function TimerPanel() {
   };
 
   const turnInfo = getTurnInfo(actionNumber, firstPlayer);
+
+  // Skip to Phase 2 function - directly set to action 10 (start of AGENT_PHASE)
+  const skipToPhase2 = () => {
+    // Use Zustand's setState to directly modify the store
+    useTournamentStore.setState((state) => ({
+      ...state,
+      actionNumber: 10,
+      currentPhase: 'AGENT_PHASE',
+      currentPlayer: getTurnInfo(10, firstPlayer).player,
+      eventStarted: true,
+      timerState: 'ready',
+      timerSeconds: 2, // Set to 2 seconds for faster testing
+      phaseAdvancePending: null,
+      lastError: null
+    }));
+  };
 
   return (
     <div className="flex flex-col h-full items-stretch space-y-3">
@@ -94,6 +111,17 @@ export function TimerPanel() {
           className="w-full px-4 py-2 bg-tokyo-accent hover:bg-tokyo-blue disabled:bg-tokyo-border disabled:cursor-not-allowed disabled:text-tokyo-text-dim text-white rounded font-medium transition-colors"
         >
           {eventStarted ? 'EVENT STARTED' : 'START EVENT'}
+        </button>
+      </div>
+
+      {/* Skip to Phase 2 Button */}
+      <div className="mt-2">
+        <button
+          onClick={skipToPhase2}
+          disabled={currentPhase === 'AGENT_PHASE' || currentPhase === 'CONCLUSION'}
+          className="w-full px-4 py-2 bg-tokyo-purple hover:bg-tokyo-pink disabled:bg-tokyo-border disabled:cursor-not-allowed disabled:text-tokyo-text-dim text-white rounded font-medium transition-colors text-sm"
+        >
+          {currentPhase === 'AGENT_PHASE' ? 'IN PHASE 2' : 'SKIP TO PHASE 2'}
         </button>
       </div>
 

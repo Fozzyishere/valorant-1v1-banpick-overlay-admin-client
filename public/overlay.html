@@ -276,6 +276,14 @@
             animation: map-decider-reveal 1.5s ease-out;
         }
         
+        .positioned-asset.agent-icon.ban.revealing {
+            animation: agent-ban-reveal 1s ease-out;
+        }
+        
+        .positioned-asset.agent-banner.pick.revealing {
+            animation: agent-pick-reveal 1.5s ease-out;
+        }
+        
         /* Map ban reveal animation */
         @keyframes map-ban-reveal {
             0% {
@@ -336,6 +344,42 @@
             }
         }
         
+        /* Agent ban reveal animation: fade-in with grayscale effect */
+        @keyframes agent-ban-reveal {
+            0% {
+                opacity: 0;
+                filter: grayscale(0%) brightness(1);
+            }
+            100% {
+                opacity: 1;
+                filter: grayscale(100%) brightness(0.7);
+            }
+        }
+        
+        /* Agent pick reveal animation: fade-in with purple glow */  
+        @keyframes agent-pick-reveal {
+            0% {
+                opacity: 0;
+                border-color: rgba(255, 215, 0, 0.6);
+                box-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+            }
+            50% { /* 0.75s fade-in complete */
+                opacity: 1;
+                border-color: rgba(255, 215, 0, 0.6);
+                box-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+            }
+            75% { /* 1.125s - peak glow reached */
+                opacity: 1;
+                border-color: rgba(255, 215, 0, 0.9);
+                box-shadow: 0 0 20px rgba(255, 215, 0, 0.7), 0 0 30px rgba(255, 215, 0, 0.3);
+            }
+            100% { /* 1.5s - glow down to normal */
+                opacity: 1;
+                border-color: rgba(255, 215, 0, 0.6);
+                box-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+            }
+        }
+        
         
         .asset-container.phase-map .positioned-asset.map.pick,
         .overlay-content.phase-map .positioned-asset.map.pick {
@@ -352,7 +396,6 @@
         /* AGENT PHASE - Agent-focused styling */
         .asset-container.phase-agent .positioned-asset.agent-icon,
         .overlay-content.phase-agent .positioned-asset.agent-icon {
-            border-radius: 50%;
             object-fit: contain;
             object-position: center center;
             border: 3px solid transparent;
@@ -362,16 +405,15 @@
         .asset-container.phase-agent .positioned-asset.agent-icon.ban,
         .overlay-content.phase-agent .positioned-asset.agent-icon.ban {
             filter: grayscale(100%) brightness(0.7);
-            border-color: rgba(255, 75, 75, 0.8);
+            border: none;
         }
         
         .asset-container.phase-agent .positioned-asset.agent-banner,
         .overlay-content.phase-agent .positioned-asset.agent-banner {
-            border-radius: 8px;
             object-fit: cover;
             object-position: center center;
-            border: 3px solid rgba(138, 43, 226, 0.6);
-            box-shadow: 0 0 12px rgba(138, 43, 226, 0.4);
+            border: 3px solid rgba(255, 215, 0, 0.6);
+            box-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
         }
 
         /* CONCLUSION PHASE - Compact summary view */
@@ -402,7 +444,6 @@
         
         .asset-container.phase-conclusion .positioned-asset.agent-icon,
         .overlay-content.phase-conclusion .positioned-asset.agent-icon {
-            border-radius: 50%;
             object-fit: contain;
             border: 2px solid rgba(255, 75, 75, 0.6);
             filter: grayscale(100%) brightness(0.8);
@@ -410,10 +451,9 @@
         
         .asset-container.phase-conclusion .positioned-asset.agent-banner,
         .overlay-content.phase-conclusion .positioned-asset.agent-banner {
-            border-radius: 8px;
             object-fit: cover;
-            border: 2px solid rgba(138, 43, 226, 0.7);
-            box-shadow: 0 0 8px rgba(138, 43, 226, 0.5);
+            border: 2px solid rgba(255, 215, 0, 0.7);
+            box-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
         }
 
         /* Phase transition animations */
@@ -671,8 +711,8 @@
 
         const AGENT_PHASE_COORDINATES = {
             teamNames: {
-                p1: { x: 350, y: 170, fontSize: '46px' },
-                p2: { x: 1565, y: 170, fontSize: '46px' }
+                p1: { x: 350, y: 165, fontSize: '46px' },
+                p2: { x: 1565, y: 165, fontSize: '46px' }
             },
             p1AgentBans: [
                 { x: 229, y: 313, width: 93, height: 93 },
@@ -685,8 +725,8 @@
                 { x: 1384, y: 313, width: 93, height: 93 }
             ],
             agentPicks: {
-                p1: { x: 344, y: 434, width: 223, height: 584 },
-                p2: { x: 1365, y: 434, width: 223, height: 584 }
+                p1: { x: 211, y: 436, width: 223, height: 584 },
+                p2: { x: 1485, y: 436, width: 223, height: 584 }
             }
         };
 
@@ -1360,17 +1400,37 @@
                     assetElement = createAssetElement(asset);
                     assetContainer.appendChild(assetElement);
                     
-                    // Apply animation for newly revealed map bans, picks, and deciders
-                    if (asset.type === 'map' && asset.slot && (asset.slot.startsWith('ban') || asset.slot === 'pick' || asset.slot === 'decider') && 
-                        asset.revealed && !animatedAssets.has(asset.id)) {
-                        
-                        assetElement.classList.add('revealing');
-                        animatedAssets.add(asset.id);
-                        
-                        // Remove revealing class after animation completes
-                        setTimeout(() => {
-                            assetElement.classList.remove('revealing');
-                        }, 1500);
+                    // Apply animation for newly revealed assets (maps and agents)
+                    if (asset.revealed && !animatedAssets.has(asset.id)) {
+                        // Map animations
+                        if (asset.type === 'map' && asset.slot && (asset.slot.startsWith('ban') || asset.slot === 'pick' || asset.slot === 'decider')) {
+                            assetElement.classList.add('revealing');
+                            animatedAssets.add(asset.id);
+                            
+                            // Remove revealing class after animation completes
+                            setTimeout(() => {
+                                assetElement.classList.remove('revealing');
+                            }, 1500);
+                        }
+                        // Agent animations
+                        else if (asset.type === 'agent-icon' && asset.slot && asset.slot.startsWith('ban')) {
+                            assetElement.classList.add('revealing');
+                            animatedAssets.add(asset.id);
+                            
+                            // Remove revealing class after animation completes (1s for agent ban)
+                            setTimeout(() => {
+                                assetElement.classList.remove('revealing');
+                            }, 1000);
+                        }
+                        else if (asset.type === 'agent-banner' && asset.slot === 'pick') {
+                            assetElement.classList.add('revealing');
+                            animatedAssets.add(asset.id);
+                            
+                            // Remove revealing class after animation completes (1.5s for agent pick)
+                            setTimeout(() => {
+                                assetElement.classList.remove('revealing');
+                            }, 1500);
+                        }
                     }
                 } else {
                     // Update existing asset element
@@ -1379,17 +1439,37 @@
                         assetElement.classList.remove('hidden');
                         assetElement.classList.add('revealed');
                         
-                        // Apply animation for newly revealed map bans, picks, and deciders (if not already animated)
-                        if (asset.type === 'map' && asset.slot && (asset.slot.startsWith('ban') || asset.slot === 'pick' || asset.slot === 'decider') && 
-                            !animatedAssets.has(asset.id)) {
-                            
-                            assetElement.classList.add('revealing');
-                            animatedAssets.add(asset.id);
-                            
-                            // Remove revealing class after animation completes
-                            setTimeout(() => {
-                                assetElement.classList.remove('revealing');
-                            }, 1500);
+                        // Apply animation for newly revealed assets (maps and agents) if not already animated
+                        if (!animatedAssets.has(asset.id)) {
+                            // Map animations
+                            if (asset.type === 'map' && asset.slot && (asset.slot.startsWith('ban') || asset.slot === 'pick' || asset.slot === 'decider')) {
+                                assetElement.classList.add('revealing');
+                                animatedAssets.add(asset.id);
+                                
+                                // Remove revealing class after animation completes
+                                setTimeout(() => {
+                                    assetElement.classList.remove('revealing');
+                                }, 1500);
+                            }
+                            // Agent animations
+                            else if (asset.type === 'agent-icon' && asset.slot && asset.slot.startsWith('ban')) {
+                                assetElement.classList.add('revealing');
+                                animatedAssets.add(asset.id);
+                                
+                                // Remove revealing class after animation completes (1s for agent ban)
+                                setTimeout(() => {
+                                    assetElement.classList.remove('revealing');
+                                }, 1000);
+                            }
+                            else if (asset.type === 'agent-banner' && asset.slot === 'pick') {
+                                assetElement.classList.add('revealing');
+                                animatedAssets.add(asset.id);
+                                
+                                // Remove revealing class after animation completes (1.5s for agent pick)
+                                setTimeout(() => {
+                                    assetElement.classList.remove('revealing');
+                                }, 1500);
+                            }
                         }
                     } else {
                         assetElement.classList.remove('revealed');
