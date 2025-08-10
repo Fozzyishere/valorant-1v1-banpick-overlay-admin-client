@@ -1,1736 +1,2150 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Valorant Tournament Overlay</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
 
-        @font-face {
-            font-family: 'iCielBrandonText';
-            src: url('/font/icielBrandonText-Bold.ttf') format('truetype');
-            font-weight: 700;
-            font-style: normal;
-            font-display: swap;
-        }
+      @font-face {
+        font-family: "iCielBrandonText";
+        src: url("/font/icielBrandonText-Bold.ttf") format("truetype");
+        font-weight: 700;
+        font-style: normal;
+        font-display: swap;
+      }
 
-        body {
-            width: 1920px;
-            height: 1080px;
-            position: relative;
-            overflow: hidden;
-            background: transparent;
-            font-family: 'iCielBrandonText', Arial, sans-serif;
-        }
+      body {
+        width: 1920px;
+        height: 1080px;
+        position: relative;
+        overflow: hidden;
+        background: transparent;
+        font-family: "iCielBrandonText", Arial, sans-serif;
+      }
 
-        .background-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 1;
-        }
+      .background-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+      }
 
-        .background-image {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 1920px;
-            height: 1080px;
-            object-fit: none; /* no scaling, use native pixels */
-            object-position: left top; /* anchor at top-left per spec */
-            transition: opacity 0.5s ease-in-out;
-            will-change: opacity;
-        }
+      .background-image {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 1920px;
+        height: 1080px;
+        object-fit: none; /* no scaling, use native pixels */
+        object-position: left top; /* anchor at top-left per spec */
+        transition: opacity 0.5s ease-in-out;
+        will-change: opacity;
+      }
 
-/* Enhance fade duration specifically during phase 1 -> phase 2 swap */
-.background-container.crossfade .background-image {
-    transition: opacity 0.8s ease-in-out;
-}
+      /* Enhance fade duration specifically during phase 1 -> phase 2 swap */
+      .background-container.crossfade .background-image {
+        transition: opacity 0.8s ease-in-out;
+      }
 
-        .overlay-content {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 2;
-            pointer-events: none;
-        }
+      .overlay-content {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 2;
+        pointer-events: none;
+      }
 
-        .team-name {
-            position: absolute;
-            color: white;
-            font-size: 48px;
-            font-weight: 700;
-            text-shadow: none;
-            transition: all 0.3s ease-in-out;
-            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 560px;
-        }
+      .team-name {
+        position: absolute;
+        color: white;
+        font-size: 48px;
+        font-weight: 700;
+        text-shadow: none;
+        transition: all 0.3s ease-in-out;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 560px;
+      }
 
-        .team-name.player1 {
-            text-align: left;
-        }
+      .team-name.player1 {
+        text-align: left;
+      }
 
-        .team-name.player2 {
-            text-align: right;
-            /* Align right edge to provided X coordinate using translate */
-            transform: translateX(-100%);
-        }
+      .team-name.player2 {
+        text-align: right;
+        /* Align right edge to provided X coordinate using translate */
+        transform: translateX(-100%);
+      }
 
-        /* Preserve right-edge alignment for player2 on hover */
-        .team-name.player1:hover {
-            transform: scale(1.02);
-        }
-        .team-name.player2:hover {
-            transform: translateX(-100%) scale(1.02);
-        }
+      /* Preserve right-edge alignment for player2 on hover */
+      .team-name.player1:hover {
+        transform: scale(1.02);
+      }
+      .team-name.player2:hover {
+        transform: translateX(-100%) scale(1.02);
+      }
 
-        @keyframes slide-in-left {
-            0% {
-                transform: translateX(-50px);
-                opacity: 0;
-            }
-            100% {
-                transform: translateX(0);
-                opacity: 1;
-            }
+      @keyframes slide-in-left {
+        0% {
+          transform: translateX(-50px);
+          opacity: 0;
         }
+        100% {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
 
-        @keyframes slide-in-right {
-            0% {
-                transform: translateX(50px);
-                opacity: 0;
-            }
-            100% {
-                transform: translateX(0);
-                opacity: 1;
-            }
+      @keyframes slide-in-right {
+        0% {
+          transform: translateX(50px);
+          opacity: 0;
         }
+        100% {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
 
-        .asset-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 3;
-            pointer-events: none;
-        }
+      .asset-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 3;
+        pointer-events: none;
+      }
 
-        /* Map slot overlays for Phase 1 baked-in map grid */
-        .map-overlay-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 4; /* above assets to ensure visible highlight */
-            pointer-events: none;
-        }
-        .map-slot-overlay {
-            position: absolute;
-            width: 277px;
-            height: 127px;
-            border-radius: 0px;
-            box-sizing: border-box;
-            transition: opacity 0.2s ease-in-out, box-shadow 0.2s ease-in-out, background 0.2s ease-in-out;
-        }
-        .map-slot-overlay.ban {
-            background: rgba(0, 0, 0, 0.55);
-            animation: map-ban-fade-in 1s ease-out;
-        }
-        
-        @keyframes map-ban-fade-in {
-            from {
-                background: rgba(0, 0, 0, 0);
-            }
-            to {
-                background: rgba(0, 0, 0, 0.55);
-            }
-        }
-        
-        @keyframes map-pick-slot-reveal {
-            0% {
-                background: rgba(0, 255, 200, 0.06);
-                border-color: transparent;
-                box-shadow: none;
-            }
-            100% {
-                background: rgba(0, 255, 200, 0.06);
-                border-color: rgba(0, 255, 200, 0.85);
-                box-shadow: 0 0 8px rgba(0, 255, 200, 0.7), 0 0 14px rgba(0, 255, 200, 0.45);
-            }
-        }
-        
-        @keyframes map-decider-slot-reveal {
-            0% {
-                background: rgba(248, 235, 126, 0.08);
-                border-color: transparent;
-                box-shadow: none;
-            }
-            100% {
-                background: rgba(248, 235, 126, 0.08);
-                border-color: rgba(248, 235, 126, 0.95);
-                box-shadow: 0 0 8px rgba(248, 235, 126, 0.85), 0 0 14px rgba(248, 235, 126, 0.55);
-            }
-        }
-        
-        .map-slot-overlay.pick {
-            background: rgba(0, 255, 200, 0.06);
-            border-width: 2px;
-            border-style: solid;
-            border-color: rgba(0, 255, 200, 0.85);
-            box-shadow: 0 0 8px rgba(0, 255, 200, 0.7), 0 0 14px rgba(0, 255, 200, 0.45);
-            animation: map-pick-slot-reveal 1s ease-out;
-        }
-        
-        .map-slot-overlay.decider {
-            background: rgba(248, 235, 126, 0.08);
-            border-width: 2px;
-            border-style: solid;
-            border-color: rgba(248, 235, 126, 0.95);
-            box-shadow: 0 0 8px rgba(248, 235, 126, 0.85), 0 0 14px rgba(248, 235, 126, 0.55);
-            animation: map-decider-slot-reveal 1s ease-out;
-        }
+      /* Map slot overlays for Phase 1 baked-in map grid */
+      .map-overlay-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 4; /* above assets to ensure visible highlight */
+        pointer-events: none;
+      }
+      .map-slot-overlay {
+        position: absolute;
+        width: 277px;
+        height: 127px;
+        border-radius: 0px;
+        box-sizing: border-box;
+        transition: opacity 0.2s ease-in-out, box-shadow 0.2s ease-in-out,
+          background 0.2s ease-in-out;
+      }
+      .map-slot-overlay.ban {
+        background: rgba(0, 0, 0, 0.55);
+        animation: map-ban-fade-in 1s ease-out;
+      }
 
-        /* Base positioned asset styles */
-        .positioned-asset {
-            position: absolute;
-            transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-            object-fit: contain;
-            transform-origin: center;
-            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
-            /* Use CSS custom properties for dynamic positioning and sizing */
-            left: var(--asset-x, 0);
-            top: var(--asset-y, 0);
-            width: var(--asset-width, 120px);
-            height: var(--asset-height, 120px);
+      @keyframes map-ban-fade-in {
+        from {
+          background: rgba(0, 0, 0, 0);
         }
+        to {
+          background: rgba(0, 0, 0, 0.55);
+        }
+      }
 
-        .positioned-asset.hidden {
-            opacity: 0;
-            transform: scale(0.8) translateY(20px);
+      @keyframes map-pick-slot-reveal {
+        0% {
+          background: rgba(0, 255, 200, 0.06);
+          border-color: transparent;
+          box-shadow: none;
         }
+        100% {
+          background: rgba(0, 255, 200, 0.06);
+          border-color: rgba(0, 255, 200, 0.85);
+          box-shadow: 0 0 8px rgba(0, 255, 200, 0.7),
+            0 0 14px rgba(0, 255, 200, 0.45);
+        }
+      }
 
-        .positioned-asset.revealed {
-            opacity: 1;
-            transform: scale(1) translateY(0);
+      @keyframes map-decider-slot-reveal {
+        0% {
+          background: rgba(248, 235, 126, 0.08);
+          border-color: transparent;
+          box-shadow: none;
         }
+        100% {
+          background: rgba(248, 235, 126, 0.08);
+          border-color: rgba(248, 235, 126, 0.95);
+          box-shadow: 0 0 8px rgba(248, 235, 126, 0.85),
+            0 0 14px rgba(248, 235, 126, 0.55);
+        }
+      }
 
-        .positioned-asset:hover {
-            transform: scale(1.05) translateY(-2px);
-            filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.4));
-        }
+      .map-slot-overlay.pick {
+        background: rgba(0, 255, 200, 0.06);
+        border-width: 2px;
+        border-style: solid;
+        border-color: rgba(0, 255, 200, 0.85);
+        box-shadow: 0 0 8px rgba(0, 255, 200, 0.7),
+          0 0 14px rgba(0, 255, 200, 0.45);
+        animation: map-pick-slot-reveal 1s ease-out;
+      }
 
-        /* Phase-specific container classes */
-        .overlay-content.phase-map {
-            --phase-scale: 1.0;
-        }
-        
-        .overlay-content.phase-agent {
-            --phase-scale: 1.0;
-        }
-        
-        .overlay-content.phase-conclusion {
-            --phase-scale: 1.0;
-        }
+      .map-slot-overlay.decider {
+        background: rgba(248, 235, 126, 0.08);
+        border-width: 2px;
+        border-style: solid;
+        border-color: rgba(248, 235, 126, 0.95);
+        box-shadow: 0 0 8px rgba(248, 235, 126, 0.85),
+          0 0 14px rgba(248, 235, 126, 0.55);
+        animation: map-decider-slot-reveal 1s ease-out;
+      }
 
-        /* Phase-specific asset styling */
-        /* MAP PHASE - Small consistent sizing */
-        .asset-container.phase-map .positioned-asset.map,
-        .overlay-content.phase-map .positioned-asset.map {
-            /* Use object-fit: cover to fill the space while maintaining aspect ratio */
-            object-fit: cover;
-            object-position: center center;
-            /* Ensure container dimensions are respected */
-            width: var(--asset-width, 143px);
-            height: var(--asset-height, 93px);
-        }
-        
-        .asset-container.phase-map .positioned-asset.map.ban,
-        .overlay-content.phase-map .positioned-asset.map.ban {
-            filter: grayscale(100%) brightness(0.7) contrast(0.9);
-        }
-        
-        /* Animation class applied only once when asset is first revealed */
-        .positioned-asset.map.ban.revealing {
-            animation: map-ban-reveal 1s ease-out;
-        }
-        
-        .positioned-asset.map.pick.revealing {
-            animation: map-pick-reveal 1.5s ease-out;
-        }
-        
-        .positioned-asset.map.decider.revealing {
-            animation: map-decider-reveal 1.5s ease-out;
-        }
-        
-        .positioned-asset.agent-icon.ban.revealing {
-            animation: agent-ban-reveal 1s ease-out;
-        }
-        
-        .positioned-asset.agent-banner.pick.revealing {
-            animation: agent-pick-reveal 1.5s ease-out;
-        }
-        
-        /* Map ban reveal animation */
-        @keyframes map-ban-reveal {
-            0% {
-                opacity: 0;
-                filter: grayscale(0%) brightness(1) contrast(1);
-            }
-            100% {
-                opacity: 1;
-                filter: grayscale(100%) brightness(0.7) contrast(0.9);
-            }
-        }
-        
-        /* Map pick reveal animation: 0.75s fade-in + 0.375s glow-up + 0.375s glow-down */
-        @keyframes map-pick-reveal {
-            0% {
-                opacity: 0;
-                border-color: rgba(0, 255, 200, 0.6);
-                box-shadow: 0 0 8px rgba(0, 255, 200, 0.4);
-            }
-            50% { /* 0.75s fade-in complete */
-                opacity: 1;
-                border-color: rgba(0, 255, 200, 0.6);
-                box-shadow: 0 0 8px rgba(0, 255, 200, 0.4);
-            }
-            75% { /* 1.125s - peak glow reached */
-                opacity: 1;
-                border-color: rgba(0, 255, 200, 0.9);
-                box-shadow: 0 0 16px rgba(0, 255, 200, 0.7), 0 0 24px rgba(0, 255, 200, 0.3);
-            }
-            100% { /* 1.5s - glow down to normal */
-                opacity: 1;
-                border-color: rgba(0, 255, 200, 0.6);
-                box-shadow: 0 0 8px rgba(0, 255, 200, 0.4);
-            }
-        }
-        
-        /* Map decider reveal animation: 0.75s fade-in + 0.375s glow-up + 0.375s glow-down */
-        @keyframes map-decider-reveal {
-            0% {
-                opacity: 0;
-                border-color: rgba(248, 235, 126, 0.8);
-                filter: drop-shadow(0 0 4px #f8eb7e) drop-shadow(0 0 8px rgba(248, 235, 126, 0.3));
-            }
-            50% { /* 0.75s fade-in complete */
-                opacity: 1;
-                border-color: rgba(248, 235, 126, 0.8);
-                filter: drop-shadow(0 0 4px #f8eb7e) drop-shadow(0 0 8px rgba(248, 235, 126, 0.3));
-            }
-            75% { /* 1.125s - peak glow reached */
-                opacity: 1;
-                border-color: rgba(248, 235, 126, 1.0);
-                filter: drop-shadow(0 0 8px #f8eb7e) drop-shadow(0 0 16px rgba(248, 235, 126, 0.6)) drop-shadow(0 0 24px rgba(248, 235, 126, 0.2));
-            }
-            100% { /* 1.5s - glow down to normal */
-                opacity: 1;
-                border-color: rgba(248, 235, 126, 0.8);
-                filter: drop-shadow(0 0 4px #f8eb7e) drop-shadow(0 0 8px rgba(248, 235, 126, 0.3));
-            }
-        }
-        
-        /* Agent ban reveal animation: fade-in with grayscale effect */
-        @keyframes agent-ban-reveal {
-            0% {
-                opacity: 0;
-                filter: grayscale(0%) brightness(1);
-            }
-            100% {
-                opacity: 1;
-                filter: grayscale(100%) brightness(0.7);
-            }
-        }
-        
-        /* Agent pick reveal animation: fade-in with purple glow */  
-        @keyframes agent-pick-reveal {
-            0% {
-                opacity: 0;
-                border-color: rgba(255, 215, 0, 0.6);
-                box-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
-            }
-            50% { /* 0.75s fade-in complete */
-                opacity: 1;
-                border-color: rgba(255, 215, 0, 0.6);
-                box-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
-            }
-            75% { /* 1.125s - peak glow reached */
-                opacity: 1;
-                border-color: rgba(255, 215, 0, 0.9);
-                box-shadow: 0 0 20px rgba(255, 215, 0, 0.7), 0 0 30px rgba(255, 215, 0, 0.3);
-            }
-            100% { /* 1.5s - glow down to normal */
-                opacity: 1;
-                border-color: rgba(255, 215, 0, 0.6);
-                box-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
-            }
-        }
-        
-        
-        .asset-container.phase-map .positioned-asset.map.pick,
-        .overlay-content.phase-map .positioned-asset.map.pick {
-            border: 2px solid rgba(0, 255, 200, 0.6);
-            box-shadow: 0 0 8px rgba(0, 255, 200, 0.4);
-        }
-        
-        .asset-container.phase-map .positioned-asset.map.decider,
-        .overlay-content.phase-map .positioned-asset.map.decider {
-            border: 2px solid rgba(248, 235, 126, 0.8);
-            filter: drop-shadow(0 0 4px #f8eb7e) drop-shadow(0 0 8px rgba(248, 235, 126, 0.3));
-        }
+      /* Agent slot overlays for Phase 2 baked-in agent grid */
+      .agent-overlay-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 4; /* above assets to ensure visible highlight */
+        pointer-events: none;
+      }
+      .agent-slot-overlay {
+        position: absolute;
+        width: 137px;
+        height: 137px;
+        border-radius: 0px;
+        box-sizing: border-box;
+        transition: opacity 0.2s ease-in-out, box-shadow 0.2s ease-in-out,
+          background 0.2s ease-in-out;
+      }
+      .agent-slot-overlay.ban {
+        background: rgba(0, 0, 0, 0.55);
+        animation: agent-ban-fade-in 1s ease-out;
+      }
 
-        /* AGENT PHASE - Agent-focused styling */
-        .asset-container.phase-agent .positioned-asset.agent-icon,
-        .overlay-content.phase-agent .positioned-asset.agent-icon {
-            object-fit: contain;
-            object-position: center center;
-            border: 3px solid transparent;
-            transition: all 0.3s ease;
+      @keyframes agent-ban-fade-in {
+        from {
+          background: rgba(0, 0, 0, 0);
         }
-        
-        .asset-container.phase-agent .positioned-asset.agent-icon.ban,
-        .overlay-content.phase-agent .positioned-asset.agent-icon.ban {
-            filter: grayscale(100%) brightness(0.7);
-            border: none;
+        to {
+          background: rgba(0, 0, 0, 0.55);
         }
-        
-        .asset-container.phase-agent .positioned-asset.agent-banner,
-        .overlay-content.phase-agent .positioned-asset.agent-banner {
-            object-fit: cover;
-            object-position: center center;
-            border: 3px solid rgba(255, 215, 0, 0.6);
-            box-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
-        }
+      }
 
-        /* CONCLUSION PHASE - Compact summary view */
-        .asset-container.phase-conclusion .positioned-asset.map,
-        .overlay-content.phase-conclusion .positioned-asset.map {
-            border-radius: 6px;
-            object-fit: cover;
-            object-position: center center;
+      @keyframes agent-pick-slot-reveal {
+        0% {
+          background: rgba(255, 215, 0, 0.06);
+          border-color: transparent;
+          box-shadow: none;
         }
-        
-        .asset-container.phase-conclusion .positioned-asset.map.ban,
-        .overlay-content.phase-conclusion .positioned-asset.map.ban {
-            filter: grayscale(100%) brightness(0.8) contrast(0.9);
-            border: 1px solid rgba(255, 75, 75, 0.4);
+        100% {
+          background: rgba(255, 215, 0, 0.06);
+          border-color: rgba(255, 215, 0, 0.85);
+          box-shadow: 0 0 8px rgba(255, 215, 0, 0.7),
+            0 0 14px rgba(255, 215, 0, 0.45);
         }
-        
-        .asset-container.phase-conclusion .positioned-asset.map.pick,
-        .overlay-content.phase-conclusion .positioned-asset.map.pick {
-            border: 3px solid rgba(0, 255, 200, 0.8);
-            box-shadow: 0 0 12px rgba(0, 255, 200, 0.6);
-        }
-        
-        .asset-container.phase-conclusion .positioned-asset.map.decider,
-        .overlay-content.phase-conclusion .positioned-asset.map.decider {
-            border: 3px solid rgba(248, 235, 126, 0.9);
-            filter: drop-shadow(0 0 6px #f8eb7e) drop-shadow(0 0 12px rgba(248, 235, 126, 0.5));
-        }
-        
-        .asset-container.phase-conclusion .positioned-asset.agent-icon,
-        .overlay-content.phase-conclusion .positioned-asset.agent-icon {
-            object-fit: contain;
-            border: 2px solid rgba(255, 75, 75, 0.6);
-            filter: grayscale(100%) brightness(0.8);
-        }
-        
-        .asset-container.phase-conclusion .positioned-asset.agent-banner,
-        .overlay-content.phase-conclusion .positioned-asset.agent-banner {
-            object-fit: cover;
-            border: 2px solid rgba(255, 215, 0, 0.7);
-            box-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
-        }
+      }
 
-        /* Phase transition animations */
-        .overlay-content.phase-transition-enter {
-            animation: phase-enter 0.8s ease-out;
-        }
-        
-        .overlay-content.phase-transition-exit {
-            animation: phase-exit 0.5s ease-in;
-        }
-        
-        @keyframes phase-enter {
-            0% {
-                opacity: 0;
-                transform: scale(0.95) translateY(10px);
-            }
-            100% {
-                opacity: 1;
-                transform: scale(1) translateY(0);
-            }
-        }
-        
-        @keyframes phase-exit {
-            0% {
-                opacity: 1;
-                transform: scale(1) translateY(0);
-            }
-            100% {
-                opacity: 0;
-                transform: scale(0.95) translateY(-10px);
-            }
-        }
+      .agent-slot-overlay.pick {
+        background: rgba(255, 215, 0, 0.06);
+        border-width: 2px;
+        border-style: solid;
+        border-color: rgba(255, 215, 0, 0.85);
+        box-shadow: 0 0 8px rgba(255, 215, 0, 0.7),
+          0 0 14px rgba(255, 215, 0, 0.45);
+        animation: agent-pick-slot-reveal 1s ease-out;
+      }
 
-        .positioned-asset.fallback {
-            border: 2px solid #ff6b6b;
-            background: rgba(200, 200, 200, 0.3);
-            backdrop-filter: blur(2px);
-            font-family: 'Arial', sans-serif;
-            border-radius: 0;
-            animation: pulse-error 2s infinite;
-        }
+      /* Base positioned asset styles */
+      .positioned-asset {
+        position: absolute;
+        transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        object-fit: contain;
+        transform-origin: center;
+        filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+        /* Use CSS custom properties for dynamic positioning and sizing */
+        left: var(--asset-x, 0);
+        top: var(--asset-y, 0);
+        width: var(--asset-width, 120px);
+        height: var(--asset-height, 120px);
+      }
 
-        .positioned-asset.fallback:hover {
-            background: rgba(255, 107, 107, 0.2);
-            animation: pulse-error-fast 1s infinite;
-        }
+      .positioned-asset.hidden {
+        opacity: 0;
+        transform: scale(0.8) translateY(20px);
+      }
 
-        @keyframes pulse-error {
-            0%, 100% {
-                border-color: #ff6b6b;
-                background: rgba(200, 200, 200, 0.3);
-            }
-            50% {
-                border-color: #ff9999;
-                background: rgba(255, 107, 107, 0.2);
-            }
-        }
+      .positioned-asset.revealed {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
 
-        @keyframes pulse-error-fast {
-            0%, 100% {
-                border-color: #ff6b6b;
-            }
-            50% {
-                border-color: #ffcccc;
-            }
-        }
+      .positioned-asset:hover {
+        transform: scale(1.05) translateY(-2px);
+        filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.4));
+      }
 
-        /* phase indicator removed */
+      /* Phase-specific container classes */
+      .overlay-content.phase-map {
+        --phase-scale: 1;
+      }
 
-        /* phase fade animation removed */
+      .overlay-content.phase-agent {
+        --phase-scale: 1;
+      }
 
-        @keyframes asset-reveal-sparkle {
-            0% {
-                opacity: 0;
-                transform: scale(0.5) rotate(-180deg);
-            }
-            50% {
-                transform: scale(1.1) rotate(0deg);
-            }
-            100% {
-                opacity: 1;
-                transform: scale(1) rotate(0deg);
-            }
-        }
+      .overlay-content.phase-conclusion {
+        --phase-scale: 1;
+      }
 
-        /* Global reveal animation for smooth transitions */
-        @keyframes global-reveal {
-            0% {
-                opacity: 0;
-                transform: scale(0.9);
-            }
-            100% {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
+      /* Phase-specific asset styling */
+      /* MAP PHASE - Small consistent sizing */
+      .asset-container.phase-map .positioned-asset.map,
+      .overlay-content.phase-map .positioned-asset.map {
+        /* Use object-fit: cover to fill the space while maintaining aspect ratio */
+        object-fit: cover;
+        object-position: center center;
+        /* Ensure container dimensions are respected */
+        width: var(--asset-width, 143px);
+        height: var(--asset-height, 93px);
+      }
 
-        /* Phase transition overlay effect */
-        .phase-transition {
-            animation: global-reveal 1s ease-out;
-        }
+      .asset-container.phase-map .positioned-asset.map.ban,
+      .overlay-content.phase-map .positioned-asset.map.ban {
+        filter: grayscale(100%) brightness(0.7) contrast(0.9);
+      }
 
-        .hidden {
-            opacity: 0;
-        }
+      /* Animation class applied only once when asset is first revealed */
+      .positioned-asset.map.ban.revealing {
+        animation: map-ban-reveal 1s ease-out;
+      }
 
-        .visible {
-            opacity: 1;
-        }
+      .positioned-asset.map.pick.revealing {
+        animation: map-pick-reveal 1.5s ease-out;
+      }
 
-        /* Timer display styling with phase-specific positioning */
-        .timer-display {
-            position: absolute;
-            color: white;
-            font-weight: 700;
-            font-family: 'iCielBrandonText', Arial, sans-serif;
-            text-shadow: none;
-            letter-spacing: 1px;
-            transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
-            user-select: none;
+      .positioned-asset.map.decider.revealing {
+        animation: map-decider-reveal 1.5s ease-out;
+      }
+
+      .positioned-asset.agent-icon.ban.revealing {
+        animation: agent-ban-reveal 1s ease-out;
+      }
+
+      .positioned-asset.agent-banner.pick.revealing {
+        animation: agent-pick-reveal 1.5s ease-out;
+      }
+
+      /* Map ban reveal animation */
+      @keyframes map-ban-reveal {
+        0% {
+          opacity: 0;
+          filter: grayscale(0%) brightness(1) contrast(1);
         }
-        
-        /* Phase-specific timer positioning */
-        .overlay-content.phase-map .timer-display {
-            top: 18px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 44px;
+        100% {
+          opacity: 1;
+          filter: grayscale(100%) brightness(0.7) contrast(0.9);
         }
-        
-        .overlay-content.phase-agent .timer-display {
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 42px;
+      }
+
+      /* Map pick reveal animation: 0.75s fade-in + 0.375s glow-up + 0.375s glow-down */
+      @keyframes map-pick-reveal {
+        0% {
+          opacity: 0;
+          border-color: rgba(0, 255, 200, 0.6);
+          box-shadow: 0 0 8px rgba(0, 255, 200, 0.4);
         }
-        
-        .overlay-content.phase-conclusion .timer-display {
-            top: 15px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 46px;
+        50% {
+          /* 0.75s fade-in complete */
+          opacity: 1;
+          border-color: rgba(0, 255, 200, 0.6);
+          box-shadow: 0 0 8px rgba(0, 255, 200, 0.4);
         }
-        
-        .timer-display.ready {}
-        .timer-display.running {}
-        .timer-display.paused {}
-        .timer-display.finished {}
+        75% {
+          /* 1.125s - peak glow reached */
+          opacity: 1;
+          border-color: rgba(0, 255, 200, 0.9);
+          box-shadow: 0 0 16px rgba(0, 255, 200, 0.7),
+            0 0 24px rgba(0, 255, 200, 0.3);
+        }
+        100% {
+          /* 1.5s - glow down to normal */
+          opacity: 1;
+          border-color: rgba(0, 255, 200, 0.6);
+          box-shadow: 0 0 8px rgba(0, 255, 200, 0.4);
+        }
+      }
+
+      /* Map decider reveal animation: 0.75s fade-in + 0.375s glow-up + 0.375s glow-down */
+      @keyframes map-decider-reveal {
+        0% {
+          opacity: 0;
+          border-color: rgba(248, 235, 126, 0.8);
+          filter: drop-shadow(0 0 4px #f8eb7e)
+            drop-shadow(0 0 8px rgba(248, 235, 126, 0.3));
+        }
+        50% {
+          /* 0.75s fade-in complete */
+          opacity: 1;
+          border-color: rgba(248, 235, 126, 0.8);
+          filter: drop-shadow(0 0 4px #f8eb7e)
+            drop-shadow(0 0 8px rgba(248, 235, 126, 0.3));
+        }
+        75% {
+          /* 1.125s - peak glow reached */
+          opacity: 1;
+          border-color: rgba(248, 235, 126, 1);
+          filter: drop-shadow(0 0 8px #f8eb7e)
+            drop-shadow(0 0 16px rgba(248, 235, 126, 0.6))
+            drop-shadow(0 0 24px rgba(248, 235, 126, 0.2));
+        }
+        100% {
+          /* 1.5s - glow down to normal */
+          opacity: 1;
+          border-color: rgba(248, 235, 126, 0.8);
+          filter: drop-shadow(0 0 4px #f8eb7e)
+            drop-shadow(0 0 8px rgba(248, 235, 126, 0.3));
+        }
+      }
+
+      /* Agent ban reveal animation: fade-in with grayscale effect */
+      @keyframes agent-ban-reveal {
+        0% {
+          opacity: 0;
+          filter: grayscale(0%) brightness(1);
+        }
+        100% {
+          opacity: 1;
+          filter: grayscale(100%) brightness(0.7);
+        }
+      }
+
+      /* Agent pick reveal animation: fade-in with purple glow */
+      @keyframes agent-pick-reveal {
+        0% {
+          opacity: 0;
+          border-color: rgba(255, 215, 0, 0.6);
+          box-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+        }
+        50% {
+          /* 0.75s fade-in complete */
+          opacity: 1;
+          border-color: rgba(255, 215, 0, 0.6);
+          box-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+        }
+        75% {
+          /* 1.125s - peak glow reached */
+          opacity: 1;
+          border-color: rgba(255, 215, 0, 0.9);
+          box-shadow: 0 0 20px rgba(255, 215, 0, 0.7),
+            0 0 30px rgba(255, 215, 0, 0.3);
+        }
+        100% {
+          /* 1.5s - glow down to normal */
+          opacity: 1;
+          border-color: rgba(255, 215, 0, 0.6);
+          box-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+        }
+      }
+
+      .asset-container.phase-map .positioned-asset.map.pick,
+      .overlay-content.phase-map .positioned-asset.map.pick {
+        border: 2px solid rgba(0, 255, 200, 0.6);
+        box-shadow: 0 0 8px rgba(0, 255, 200, 0.4);
+      }
+
+      .asset-container.phase-map .positioned-asset.map.decider,
+      .overlay-content.phase-map .positioned-asset.map.decider {
+        border: 2px solid rgba(248, 235, 126, 0.8);
+        filter: drop-shadow(0 0 4px #f8eb7e)
+          drop-shadow(0 0 8px rgba(248, 235, 126, 0.3));
+      }
+
+      /* AGENT PHASE - Agent-focused styling */
+      .asset-container.phase-agent .positioned-asset.agent-icon,
+      .overlay-content.phase-agent .positioned-asset.agent-icon {
+        object-fit: contain;
+        object-position: center center;
+        border: 3px solid transparent;
+        transition: all 0.3s ease;
+      }
+
+      .asset-container.phase-agent .positioned-asset.agent-icon.ban,
+      .overlay-content.phase-agent .positioned-asset.agent-icon.ban {
+        filter: grayscale(100%) brightness(0.7);
+        border: none;
+      }
+
+      .asset-container.phase-agent .positioned-asset.agent-banner,
+      .overlay-content.phase-agent .positioned-asset.agent-banner {
+        object-fit: cover;
+        object-position: center center;
+        border: 3px solid rgba(255, 215, 0, 0.6);
+        box-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+      }
+
+      /* CONCLUSION PHASE - Compact summary view */
+      .asset-container.phase-conclusion .positioned-asset.map,
+      .overlay-content.phase-conclusion .positioned-asset.map {
+        border-radius: 6px;
+        object-fit: cover;
+        object-position: center center;
+      }
+
+      .asset-container.phase-conclusion .positioned-asset.map.ban,
+      .overlay-content.phase-conclusion .positioned-asset.map.ban {
+        filter: grayscale(100%) brightness(0.8) contrast(0.9);
+        border: 1px solid rgba(255, 75, 75, 0.4);
+      }
+
+      .asset-container.phase-conclusion .positioned-asset.map.pick,
+      .overlay-content.phase-conclusion .positioned-asset.map.pick {
+        border: 3px solid rgba(0, 255, 200, 0.8);
+        box-shadow: 0 0 12px rgba(0, 255, 200, 0.6);
+      }
+
+      .asset-container.phase-conclusion .positioned-asset.map.decider,
+      .overlay-content.phase-conclusion .positioned-asset.map.decider {
+        border: 3px solid rgba(248, 235, 126, 0.9);
+        filter: drop-shadow(0 0 6px #f8eb7e)
+          drop-shadow(0 0 12px rgba(248, 235, 126, 0.5));
+      }
+
+      .asset-container.phase-conclusion .positioned-asset.agent-icon,
+      .overlay-content.phase-conclusion .positioned-asset.agent-icon {
+        object-fit: contain;
+        border: 2px solid rgba(255, 75, 75, 0.6);
+        filter: grayscale(100%) brightness(0.8);
+      }
+
+      .asset-container.phase-conclusion .positioned-asset.agent-banner,
+      .overlay-content.phase-conclusion .positioned-asset.agent-banner {
+        object-fit: cover;
+        border: 2px solid rgba(255, 215, 0, 0.7);
+        box-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
+      }
+
+      /* Phase transition animations */
+      .overlay-content.phase-transition-enter {
+        animation: phase-enter 0.8s ease-out;
+      }
+
+      .overlay-content.phase-transition-exit {
+        animation: phase-exit 0.5s ease-in;
+      }
+
+      @keyframes phase-enter {
+        0% {
+          opacity: 0;
+          transform: scale(0.95) translateY(10px);
+        }
+        100% {
+          opacity: 1;
+          transform: scale(1) translateY(0);
+        }
+      }
+
+      @keyframes phase-exit {
+        0% {
+          opacity: 1;
+          transform: scale(1) translateY(0);
+        }
+        100% {
+          opacity: 0;
+          transform: scale(0.95) translateY(-10px);
+        }
+      }
+
+      .positioned-asset.fallback {
+        border: 2px solid #ff6b6b;
+        background: rgba(200, 200, 200, 0.3);
+        backdrop-filter: blur(2px);
+        font-family: "Arial", sans-serif;
+        border-radius: 0;
+        animation: pulse-error 2s infinite;
+      }
+
+      .positioned-asset.fallback:hover {
+        background: rgba(255, 107, 107, 0.2);
+        animation: pulse-error-fast 1s infinite;
+      }
+
+      @keyframes pulse-error {
+        0%,
+        100% {
+          border-color: #ff6b6b;
+          background: rgba(200, 200, 200, 0.3);
+        }
+        50% {
+          border-color: #ff9999;
+          background: rgba(255, 107, 107, 0.2);
+        }
+      }
+
+      @keyframes pulse-error-fast {
+        0%,
+        100% {
+          border-color: #ff6b6b;
+        }
+        50% {
+          border-color: #ffcccc;
+        }
+      }
+
+      /* phase indicator removed */
+
+      /* phase fade animation removed */
+
+      @keyframes asset-reveal-sparkle {
+        0% {
+          opacity: 0;
+          transform: scale(0.5) rotate(-180deg);
+        }
+        50% {
+          transform: scale(1.1) rotate(0deg);
+        }
+        100% {
+          opacity: 1;
+          transform: scale(1) rotate(0deg);
+        }
+      }
+
+      /* Global reveal animation for smooth transitions */
+      @keyframes global-reveal {
+        0% {
+          opacity: 0;
+          transform: scale(0.9);
+        }
+        100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      /* Phase transition overlay effect */
+      .phase-transition {
+        animation: global-reveal 1s ease-out;
+      }
+
+      .hidden {
+        opacity: 0;
+      }
+
+      .visible {
+        opacity: 1;
+      }
+
+      /* Timer display styling with phase-specific positioning */
+      .timer-display {
+        position: absolute;
+        color: white;
+        font-weight: 700;
+        font-family: "iCielBrandonText", Arial, sans-serif;
+        text-shadow: none;
+        letter-spacing: 1px;
+        transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+        user-select: none;
+      }
+
+      /* Phase-specific timer positioning */
+      .overlay-content.phase-map .timer-display {
+        top: 18px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 44px;
+      }
+
+      .overlay-content.phase-agent .timer-display {
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 42px;
+      }
+
+      .overlay-content.phase-conclusion .timer-display {
+        display: none;
+      }
+
+      .timer-display.ready {
+      }
+      .timer-display.running {
+      }
+      .timer-display.paused {
+      }
+      .timer-display.finished {
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="background-container">
-        <img id="phase-1-bg" class="background-image visible" src="/img/phase-1-map.png" alt="Map Phase Background" />
-        <img id="phase-2-bg" class="background-image hidden" src="/img/phase-2-agent.png" alt="Agent Phase Background" />
-        <img id="conclusion-bg" class="background-image hidden" src="/img/conclusion.png" alt="Conclusion Background" />
+      <img
+        id="phase-1-bg"
+        class="background-image visible"
+        src="/img/phase-1-map.png"
+        alt="Map Phase Background"
+      />
+      <img
+        id="phase-2-bg"
+        class="background-image hidden"
+        src="/img/phase-2-agent.png"
+        alt="Agent Phase Background"
+      />
+      <img
+        id="conclusion-bg"
+        class="background-image hidden"
+        src="/img/conclusion.png"
+        alt="Conclusion Background"
+      />
     </div>
 
     <div class="overlay-content">
-        <div class="team-name player1" id="team1-name">Player 1</div>
-        <div class="team-name player2" id="team2-name">Player 2</div>
-        <div class="timer-display ready" id="timer-display">3</div>
+      <div class="team-name player1" id="team1-name">Player 1</div>
+      <div class="team-name player2" id="team2-name">Player 2</div>
+      <div class="timer-display ready" id="timer-display">3</div>
     </div>
 
     <div class="asset-container" id="asset-container">
-        <!-- Tournament assets will be positioned here dynamically -->
+      <!-- Tournament assets will be positioned here dynamically -->
     </div>
     <div class="map-overlay-container" id="map-overlay-container"></div>
+    <div class="agent-overlay-container" id="agent-overlay-container"></div>
 
     <script>
-        // Tournament state management
-        let tournamentState = {
-            currentPhase: 'MAP_PHASE',
-            teamNames: { P1: 'Player 1', P2: 'Player 2' },
-            actionNumber: 1,
-            mapsBanned: { P1: [], P2: [] },
-            mapsPicked: { P1: null, P2: null },
-            deciderMap: null,
-            agentsBanned: { P1: [], P2: [] },
-            agentPicks: { P1: null, P2: null },
-            timerState: 'ready',
-            timerSeconds: 30
-        };
+      // Tournament state management
+      let tournamentState = {
+        currentPhase: "MAP_PHASE",
+        teamNames: { P1: "Player 1", P2: "Player 2" },
+        actionNumber: 1,
+        mapsBanned: { P1: [], P2: [] },
+        mapsPicked: { P1: null, P2: null },
+        deciderMap: null,
+        agentsBanned: { P1: [], P2: [] },
+        agentPicks: { P1: null, P2: null },
+        timerState: "ready",
+        timerSeconds: 30,
+      };
 
-        // Asset reveal state tracking
-        let pendingAssets = new Set(); // Assets selected but not yet revealed
-        let revealedAssets = new Set(); // Assets that are visible on overlay
-        let failedAssets = new Set(); // Assets that failed to load
-        let retryAttempts = new Map(); // Track retry attempts for failed assets
-        let animatedAssets = new Set(); // Track assets that have already played their reveal animation
-        let animatedSlotOverlays = new Set(); // Track slot overlays that have already played their reveal animation
+      // Asset reveal state tracking
+      let pendingAssets = new Set(); // Assets selected but not yet revealed
+      let revealedAssets = new Set(); // Assets that are visible on overlay
+      let failedAssets = new Set(); // Assets that failed to load
+      let retryAttempts = new Map(); // Track retry attempts for failed assets
+      let animatedAssets = new Set(); // Track assets that have already played their reveal animation
+      let animatedSlotOverlays = new Set(); // Track slot overlays that have already played their reveal animation
 
-        // Error handling configuration
-        const MAX_RETRY_ATTEMPTS = 3;
-        const RETRY_DELAY = 2000; // 2 seconds
+      // Error handling configuration
+      const MAX_RETRY_ATTEMPTS = 3;
+      const RETRY_DELAY = 2000; // 2 seconds
 
-        // Helper: detect a fresh tournament start state for clarity
-        function isTournamentAtInitialState(state) {
-            const noMapBans = !(state.mapsBanned?.P1?.length) && !(state.mapsBanned?.P2?.length);
-            const noMapPicks = !state.mapsPicked?.P1 && !state.mapsPicked?.P2;
-            const noDecider = !state.deciderMap;
-            const noAgentBans = !(state.agentsBanned?.P1?.length) && !(state.agentsBanned?.P2?.length);
-            const noAgentPicks = !state.agentPicks?.P1 && !state.agentPicks?.P2;
-            return state.actionNumber === 1 && noMapBans && noMapPicks && noDecider && noAgentBans && noAgentPicks;
-        }
+      // Helper: detect a fresh tournament start state for clarity
+      function isTournamentAtInitialState(state) {
+        const noMapBans =
+          !state.mapsBanned?.P1?.length && !state.mapsBanned?.P2?.length;
+        const noMapPicks = !state.mapsPicked?.P1 && !state.mapsPicked?.P2;
+        const noDecider = !state.deciderMap;
+        const noAgentBans =
+          !state.agentsBanned?.P1?.length && !state.agentsBanned?.P2?.length;
+        const noAgentPicks = !state.agentPicks?.P1 && !state.agentPicks?.P2;
+        return (
+          state.actionNumber === 1 &&
+          noMapBans &&
+          noMapPicks &&
+          noDecider &&
+          noAgentBans &&
+          noAgentPicks
+        );
+      }
 
-        // Helper: clear all overlay asset/retry state
-        function clearAllAssetState() {
-            pendingAssets.clear();
-            revealedAssets.clear();
-            failedAssets.clear();
-            retryAttempts.clear();
-            animatedAssets.clear();
-            animatedSlotOverlays.clear();
-        }
+      // Helper: clear all overlay asset/retry state
+      function clearAllAssetState() {
+        pendingAssets.clear();
+        revealedAssets.clear();
+        failedAssets.clear();
+        retryAttempts.clear();
+        animatedAssets.clear();
+        animatedSlotOverlays.clear();
+      }
 
-        // Phase-specific coordinate system with dimensions and styling data
-        // Map slot coordinates for baked-in Phase 1 grid (top-left x,y)
-        const MAP_SLOT_COORDS = {
-            abyss:   { x: 217,  y: 464 },
-            ascent:  { x: 518,  y: 465 },
-            bind:    { x: 821,  y: 464 },
-            breeze:  { x: 1123, y: 464 },
-            fracture:{ x: 1426, y: 464 },
-            split:   { x: 1425, y: 613 },
-            pearl:   { x: 1123, y: 613 },
-            lotus:   { x: 821,  y: 613 },
-            icebox:  { x: 518,  y: 613 },
-            haven:   { x: 216,  y: 613 },
-            sunset:  { x: 217,  y: 762 },
-            corrode: { x: 519,  y: 763 },
-        };
+      // Phase-specific coordinate system with dimensions and styling data
+      // Map slot coordinates for baked-in Phase 1 grid (top-left x,y)
+      const MAP_SLOT_COORDS = {
+        abyss: { x: 217, y: 464 },
+        ascent: { x: 518, y: 465 },
+        bind: { x: 821, y: 464 },
+        breeze: { x: 1123, y: 464 },
+        fracture: { x: 1426, y: 464 },
+        split: { x: 1425, y: 613 },
+        pearl: { x: 1123, y: 613 },
+        lotus: { x: 821, y: 613 },
+        icebox: { x: 518, y: 613 },
+        haven: { x: 216, y: 613 },
+        sunset: { x: 217, y: 762 },
+        corrode: { x: 519, y: 763 },
+      };
 
-        // Phase-specific configurations with complete layout data
-        const MAP_PHASE_COORDINATES = {
-            teamNames: {
-                p1: { x: 342, y: 159, fontSize: '48px' },
-                p2: { x: 1572, y: 159, fontSize: '48px' }
-            },
-            p1MapBans: [
-                { x: 229, y: 325, width: 143, height: 93 },
-                { x: 384, y: 325, width: 143, height: 93 },
-                { x: 538, y: 325, width: 143, height: 93 }
-            ],
-            p2MapBans: [
-                { x: 1546, y: 325, width: 143, height: 93 },
-                { x: 1392, y: 325, width: 143, height: 93 },
-                { x: 1237, y: 325, width: 143, height: 93 }
-            ],
-            mapPicks: {
-                p1: { x: 734, y: 325, width: 144, height: 95 },
-                p2: { x: 1042, y: 325, width: 144, height: 95 },
-                decider: { x: 888, y: 325, width: 144, height: 95 }
+      // Agent slot coordinates for baked-in Phase 2 grid (top-left x,y, 137px x 137px each)
+      const AGENT_SLOT_COORDS = {
+        chamber: { x: 451, y: 436 },
+        deadlock: { x: 597, y: 436 },
+        fade: { x: 744, y: 436 },
+        gekko: { x: 891, y: 436 },
+        harbor: { x: 1039, y: 436 },
+        iso: { x: 1185, y: 436 },
+        jett: { x: 1332, y: 436 },
+        kayo: { x: 450, y: 585 },
+        killjoy: { x: 597, y: 585 },
+        neon: { x: 744, y: 585 },
+        omen: { x: 891, y: 585 },
+        phoenix: { x: 1038, y: 585 },
+        raze: { x: 1185, y: 585 },
+        reyna: { x: 1332, y: 585 },
+        sage: { x: 450, y: 734 },
+        skye: { x: 597, y: 734 },
+        sova: { x: 744, y: 734 },
+        tejo: { x: 891, y: 734 },
+        viper: { x: 1038, y: 734 },
+        vyse: { x: 1185, y: 734 },
+        waylay: { x: 1332, y: 734 },
+        yoru: { x: 450, y: 883 },
+        astra: { x: 597, y: 883 },
+        breach: { x: 744, y: 883 },
+        brimstone: { x: 891, y: 883 },
+        clove: { x: 1038, y: 883 },
+        cypher: { x: 1185, y: 883 },
+      };
+
+      // Phase-specific configurations with complete layout data
+      const MAP_PHASE_COORDINATES = {
+        teamNames: {
+          p1: { x: 342, y: 159, fontSize: "48px" },
+          p2: { x: 1572, y: 159, fontSize: "48px" },
+        },
+        p1MapBans: [
+          { x: 229, y: 325, width: 143, height: 93 },
+          { x: 384, y: 325, width: 143, height: 93 },
+          { x: 538, y: 325, width: 143, height: 93 },
+        ],
+        p2MapBans: [
+          { x: 1546, y: 325, width: 143, height: 93 },
+          { x: 1392, y: 325, width: 143, height: 93 },
+          { x: 1237, y: 325, width: 143, height: 93 },
+        ],
+        mapPicks: {
+          p1: { x: 734, y: 325, width: 144, height: 95 },
+          p2: { x: 1042, y: 325, width: 144, height: 95 },
+          decider: { x: 888, y: 325, width: 144, height: 95 },
+        },
+      };
+
+      const AGENT_PHASE_COORDINATES = {
+        teamNames: {
+          p1: { x: 350, y: 165, fontSize: "46px" },
+          p2: { x: 1565, y: 165, fontSize: "46px" },
+        },
+        p1AgentBans: [
+          { x: 229, y: 313, width: 93, height: 93 },
+          { x: 335, y: 313, width: 93, height: 93 },
+          { x: 441, y: 313, width: 93, height: 93 },
+        ],
+        p2AgentBans: [
+          { x: 1596, y: 313, width: 93, height: 93 },
+          { x: 1490, y: 313, width: 93, height: 93 },
+          { x: 1384, y: 313, width: 93, height: 93 },
+        ],
+        agentPicks: {
+          p1: { x: 211, y: 436, width: 223, height: 584 },
+          p2: { x: 1485, y: 436, width: 223, height: 584 },
+        },
+      };
+
+      const CONCLUSION_COORDINATES = {
+        teamNames: {
+          p1: { x: 342, y: 159, fontSize: "50px" },
+          p2: { x: 1572, y: 159, fontSize: "50px" },
+        },
+        p1MapBans: [
+          { x: 229, y: 313, width: 143, height: 93 },
+          { x: 384, y: 313, width: 143, height: 93 },
+          { x: 538, y: 313, width: 143, height: 93 },
+        ],
+        p2MapBans: [
+          { x: 1546, y: 313, width: 143, height: 93 },
+          { x: 1392, y: 313, width: 143, height: 93 },
+          { x: 1237, y: 313, width: 143, height: 93 },
+        ],
+        mapPicks: {
+          p1: { x: 620, y: 480, width: 277, height: 156 },
+          p2: { x: 1021, y: 480, width: 277, height: 156 },
+          decider: { x: 822, y: 693, width: 277, height: 156 },
+        },
+        p1AgentBans: [
+          { x: 621, y: 909, width: 93, height: 93 },
+          { x: 727, y: 909, width: 93, height: 93 },
+          { x: 833, y: 909, width: 93, height: 93 },
+        ],
+        p2AgentBans: [
+          { x: 1215, y: 909, width: 93, height: 93 },
+          { x: 1109, y: 909, width: 93, height: 93 },
+          { x: 1003, y: 909, width: 93, height: 93 },
+        ],
+        agentPicks: {
+          p1: { x: 344, y: 434, width: 233, height: 584 },
+          p2: { x: 1365, y: 434, width: 233, height: 584 },
+        },
+      };
+
+      // Phase configuration lookup
+      const PHASE_COORDINATES = {
+        MAP_PHASE: MAP_PHASE_COORDINATES,
+        AGENT_PHASE: AGENT_PHASE_COORDINATES,
+        CONCLUSION: CONCLUSION_COORDINATES,
+      };
+
+      // Phase background mapping - streamlined to 3 phases
+      const phaseBackgrounds = {
+        MAP_PHASE: "phase-1-bg",
+        AGENT_PHASE: "phase-2-bg",
+        CONCLUSION: "conclusion-bg",
+      };
+
+      // Phase display text mapping (no longer used)
+      const phaseDisplayText = {};
+
+      // Track which background is currently visible to avoid blank transitions
+      let currentBackgroundId = "phase-1-bg";
+
+      // Update background based on current phase (preload-safe)
+      function updateBackground(phase) {
+        const targetId = phaseBackgrounds[phase];
+        if (!targetId || targetId === currentBackgroundId) return;
+
+        const targetEl = document.getElementById(targetId);
+        if (!targetEl) return;
+
+        const switchToTarget = () => {
+          // Show target first
+          targetEl.classList.remove("hidden");
+          targetEl.classList.add("visible");
+          // Then hide others
+          document.querySelectorAll(".background-image").forEach((img) => {
+            if (img.id !== targetId) {
+              img.classList.remove("visible");
+              img.classList.add("hidden");
             }
+          });
+          currentBackgroundId = targetId;
         };
 
-        const AGENT_PHASE_COORDINATES = {
-            teamNames: {
-                p1: { x: 350, y: 165, fontSize: '46px' },
-                p2: { x: 1565, y: 165, fontSize: '46px' }
-            },
-            p1AgentBans: [
-                { x: 229, y: 313, width: 93, height: 93 },
-                { x: 335, y: 313, width: 93, height: 93 },
-                { x: 441, y: 313, width: 93, height: 93 }
-            ],
-            p2AgentBans: [
-                { x: 1596, y: 313, width: 93, height: 93 },
-                { x: 1490, y: 313, width: 93, height: 93 },
-                { x: 1384, y: 313, width: 93, height: 93 }
-            ],
-            agentPicks: {
-                p1: { x: 211, y: 436, width: 223, height: 584 },
-                p2: { x: 1485, y: 436, width: 223, height: 584 }
-            }
-        };
-
-        const CONCLUSION_COORDINATES = {
-            teamNames: {
-                p1: { x: 342, y: 159, fontSize: '50px' },
-                p2: { x: 1572, y: 159, fontSize: '50px' }
-            },
-            p1MapBans: [
-                { x: 229, y: 313, width: 120, height: 80 },
-                { x: 384, y: 313, width: 120, height: 80 },
-                { x: 538, y: 313, width: 120, height: 80 }
-            ],
-            p2MapBans: [
-                { x: 1546, y: 313, width: 120, height: 80 },
-                { x: 1392, y: 313, width: 120, height: 80 },
-                { x: 1237, y: 313, width: 120, height: 80 }
-            ],
-            mapPicks: {
-                p1: { x: 604, y: 479, width: 277, height: 156 },
-                p2: { x: 1009, y: 479, width: 277, height: 156 },
-                decider: { x: 604, y: 682, width: 277, height: 156 }
-            },
-            p1AgentBans: [
-                { x: 621, y: 909, width: 80, height: 80 },
-                { x: 727, y: 909, width: 80, height: 80 },
-                { x: 833, y: 909, width: 80, height: 80 }
-            ],
-            p2AgentBans: [
-                { x: 1215, y: 909, width: 80, height: 80 },
-                { x: 1109, y: 909, width: 80, height: 80 },
-                { x: 1003, y: 909, width: 80, height: 80 }
-            ],
-            agentPicks: {
-                p1: { x: 211, y: 436, width: 200, height: 520 },
-                p2: { x: 1366, y: 436, width: 200, height: 520 }
-            }
-        };
-
-        // Phase configuration lookup
-        const PHASE_COORDINATES = {
-            'MAP_PHASE': MAP_PHASE_COORDINATES,
-            'AGENT_PHASE': AGENT_PHASE_COORDINATES,
-            'CONCLUSION': CONCLUSION_COORDINATES
-        };
-
-        // Phase background mapping - streamlined to 3 phases
-        const phaseBackgrounds = {
-            'MAP_PHASE': 'phase-1-bg',
-            'AGENT_PHASE': 'phase-2-bg',
-            'CONCLUSION': 'conclusion-bg'
-        };
-
-        // Phase display text mapping (no longer used)
-        const phaseDisplayText = {};
-
-        // Track which background is currently visible to avoid blank transitions
-        let currentBackgroundId = 'phase-1-bg';
-
-        // Update background based on current phase (preload-safe)
-        function updateBackground(phase) {
-            const targetId = phaseBackgrounds[phase];
-            if (!targetId || targetId === currentBackgroundId) return;
-
-            const targetEl = document.getElementById(targetId);
-            if (!targetEl) return;
-
-            const switchToTarget = () => {
-                // Show target first
-                targetEl.classList.remove('hidden');
-                targetEl.classList.add('visible');
-                // Then hide others
-                document.querySelectorAll('.background-image').forEach(img => {
-                    if (img.id !== targetId) {
-                        img.classList.remove('visible');
-                        img.classList.add('hidden');
-                    }
-                });
-                currentBackgroundId = targetId;
-            };
-
-            const imgEl = targetEl;
-    const bgContainer = document.querySelector('.background-container');
-    const shouldCrossfade = currentBackgroundId === 'phase-1-bg' && targetId === 'phase-2-bg';
-    if (bgContainer && shouldCrossfade) {
-        bgContainer.classList.add('crossfade');
-    }
-            // If already loaded, or can be decoded, switch when ready
-            if (imgEl instanceof HTMLImageElement) {
-                if (imgEl.complete && imgEl.naturalWidth > 0) {
-                    switchToTarget();
-                    if (bgContainer && shouldCrossfade) {
-                        setTimeout(() => bgContainer.classList.remove('crossfade'), 900);
-                    }
-                    return;
-                }
-                if (typeof imgEl.decode === 'function') {
-                    imgEl.decode().then(() => {
-                        switchToTarget();
-                        if (bgContainer && shouldCrossfade) {
-                            setTimeout(() => bgContainer.classList.remove('crossfade'), 900);
-                        }
-                    }).catch(() => {
-                        // Fallback to load handler
-                        const onLoad = () => {
-                            imgEl.removeEventListener('load', onLoad);
-                            switchToTarget();
-                            if (bgContainer && shouldCrossfade) {
-                                setTimeout(() => bgContainer.classList.remove('crossfade'), 900);
-                            }
-                        };
-                        imgEl.addEventListener('load', onLoad);
-                    });
-                    return;
-                }
-            }
-
-            // Otherwise, wait for load; keep current visible to avoid white screen
-            if (imgEl instanceof HTMLImageElement) {
-                const onLoad = () => {
-                    imgEl.removeEventListener('load', onLoad);
-                    switchToTarget();
-            if (bgContainer && shouldCrossfade) {
-                setTimeout(() => bgContainer.classList.remove('crossfade'), 900);
-            }
-                };
-                imgEl.addEventListener('load', onLoad);
-                // Trigger load by reassigning src if needed
-                if (!imgEl.src) {
-                    imgEl.src = imgEl.getAttribute('src') || '';
-                }
-            } else {
-                // Non-image element fallback
-                switchToTarget();
+        const imgEl = targetEl;
+        const bgContainer = document.querySelector(".background-container");
+        const shouldCrossfade =
+          currentBackgroundId === "phase-1-bg" && targetId === "phase-2-bg";
         if (bgContainer && shouldCrossfade) {
-            setTimeout(() => bgContainer.classList.remove('crossfade'), 900);
+          bgContainer.classList.add("crossfade");
         }
+        // If already loaded, or can be decoded, switch when ready
+        if (imgEl instanceof HTMLImageElement) {
+          if (imgEl.complete && imgEl.naturalWidth > 0) {
+            switchToTarget();
+            if (bgContainer && shouldCrossfade) {
+              setTimeout(() => bgContainer.classList.remove("crossfade"), 900);
             }
-        }
-
-        // Update team names with positioning
-        function updateTeamNames(teamNames, currentPhase) {
-            const team1Element = document.getElementById('team1-name');
-            const team2Element = document.getElementById('team2-name');
-
-            if (team1Element) {
-                const t1 = (teamNames.P1 ?? '').trim();
-                team1Element.textContent = t1.length ? t1 : 'Player 1';
-            }
-            if (team2Element) {
-                const t2 = (teamNames.P2 ?? '').trim();
-                team2Element.textContent = t2.length ? t2 : 'Player 2';
-            }
-
-            // Position team names based on current phase
-            positionTeamNames(currentPhase);
-        }
-
-        // Position team names based on current phase coordinates
-        function positionTeamNames(currentPhase) {
-            const team1Element = document.getElementById('team1-name');
-            const team2Element = document.getElementById('team2-name');
-
-            // Get phase-specific coordinates
-            const coords = PHASE_COORDINATES[currentPhase]?.teamNames || PHASE_COORDINATES['MAP_PHASE'].teamNames;
-
-            if (team1Element && coords.p1) {
-                team1Element.style.left = `${coords.p1.x}px`;
-                team1Element.style.top = `${coords.p1.y}px`;
-                team1Element.style.fontSize = coords.p1.fontSize || '48px';
-                team1Element.style.transform = '';
-            }
-            if (team2Element && coords.p2) {
-                team2Element.style.left = `${coords.p2.x}px`;
-                team2Element.style.top = `${coords.p2.y}px`;
-                team2Element.style.fontSize = coords.p2.fontSize || '48px';
-                // Keep right-edge anchoring via translate
-                team2Element.style.transform = 'translateX(-100%)';
-            }
+            return;
+          }
+          if (typeof imgEl.decode === "function") {
+            imgEl
+              .decode()
+              .then(() => {
+                switchToTarget();
+                if (bgContainer && shouldCrossfade) {
+                  setTimeout(
+                    () => bgContainer.classList.remove("crossfade"),
+                    900
+                  );
+                }
+              })
+              .catch(() => {
+                // Fallback to load handler
+                const onLoad = () => {
+                  imgEl.removeEventListener("load", onLoad);
+                  switchToTarget();
+                  if (bgContainer && shouldCrossfade) {
+                    setTimeout(
+                      () => bgContainer.classList.remove("crossfade"),
+                      900
+                    );
+                  }
+                };
+                imgEl.addEventListener("load", onLoad);
+              });
+            return;
+          }
         }
 
-        // Update timer display (seconds only)
-        function updateTimerDisplay(timerSeconds, timerState) {
-            const timerEl = document.getElementById('timer-display');
-            if (!timerEl) return;
-            const secs = Math.max(0, Math.floor(timerSeconds || 0));
-            timerEl.textContent = String(secs);
-            timerEl.classList.remove('ready', 'running', 'paused', 'finished');
-            if (timerState) timerEl.classList.add(String(timerState));
+        // Otherwise, wait for load; keep current visible to avoid white screen
+        if (imgEl instanceof HTMLImageElement) {
+          const onLoad = () => {
+            imgEl.removeEventListener("load", onLoad);
+            switchToTarget();
+            if (bgContainer && shouldCrossfade) {
+              setTimeout(() => bgContainer.classList.remove("crossfade"), 900);
+            }
+          };
+          imgEl.addEventListener("load", onLoad);
+          // Trigger load by reassigning src if needed
+          if (!imgEl.src) {
+            imgEl.src = imgEl.getAttribute("src") || "";
+          }
+        } else {
+          // Non-image element fallback
+          switchToTarget();
+          if (bgContainer && shouldCrossfade) {
+            setTimeout(() => bgContainer.classList.remove("crossfade"), 900);
+          }
+        }
+      }
+
+      // Update team names with positioning
+      function updateTeamNames(teamNames, currentPhase) {
+        const team1Element = document.getElementById("team1-name");
+        const team2Element = document.getElementById("team2-name");
+
+        if (team1Element) {
+          const t1 = (teamNames.P1 ?? "").trim();
+          team1Element.textContent = t1.length ? t1 : "Player 1";
+        }
+        if (team2Element) {
+          const t2 = (teamNames.P2 ?? "").trim();
+          team2Element.textContent = t2.length ? t2 : "Player 2";
         }
 
-        // Generate asset file path
-        function getAssetFilePath(assetName, assetType) {
-            const assetFolders = {
-                'map': 'maps',
-                'agent-icon': 'agents-icon',
-                'agent-banner': 'agent-banner'
+        // Position team names based on current phase
+        positionTeamNames(currentPhase);
+      }
+
+      // Position team names based on current phase coordinates
+      function positionTeamNames(currentPhase) {
+        const team1Element = document.getElementById("team1-name");
+        const team2Element = document.getElementById("team2-name");
+
+        // Get phase-specific coordinates
+        const coords =
+          PHASE_COORDINATES[currentPhase]?.teamNames ||
+          PHASE_COORDINATES["MAP_PHASE"].teamNames;
+
+        if (team1Element && coords.p1) {
+          team1Element.style.left = `${coords.p1.x}px`;
+          team1Element.style.top = `${coords.p1.y}px`;
+          team1Element.style.fontSize = coords.p1.fontSize || "48px";
+          team1Element.style.transform = "";
+        }
+        if (team2Element && coords.p2) {
+          team2Element.style.left = `${coords.p2.x}px`;
+          team2Element.style.top = `${coords.p2.y}px`;
+          team2Element.style.fontSize = coords.p2.fontSize || "48px";
+          // Keep right-edge anchoring via translate
+          team2Element.style.transform = "translateX(-100%)";
+        }
+      }
+
+      // Update timer display (seconds only)
+      function updateTimerDisplay(timerSeconds, timerState) {
+        const timerEl = document.getElementById("timer-display");
+        if (!timerEl) return;
+        const secs = Math.max(0, Math.floor(timerSeconds || 0));
+        timerEl.textContent = String(secs);
+        timerEl.classList.remove("ready", "running", "paused", "finished");
+        if (timerState) timerEl.classList.add(String(timerState));
+      }
+
+      // Generate asset file path
+      function getAssetFilePath(assetName, assetType) {
+        const assetFolders = {
+          map: "maps",
+          "agent-icon": "agents-icon",
+          "agent-banner": "agent-banner",
+        };
+        return `/img/${assetFolders[assetType]}/${assetName}.png`;
+      }
+
+      // Create fallback element for failed assets
+      function createFallbackElement(asset) {
+        const fallback = document.createElement("div");
+        fallback.id = asset.id;
+
+        // Build CSS classes matching main asset element
+        let cssClasses = ["positioned-asset", "fallback", asset.type];
+        cssClasses.push(asset.revealed ? "revealed" : "hidden");
+
+        if (asset.slot) {
+          const slotType = asset.slot.startsWith("ban")
+            ? "ban"
+            : asset.slot === "pick"
+            ? "pick"
+            : asset.slot === "decider"
+            ? "decider"
+            : asset.slot;
+          cssClasses.push(slotType);
+        }
+
+        fallback.className = cssClasses.join(" ");
+
+        // Use CSS custom properties for positioning and sizing
+        fallback.style.setProperty("--asset-x", `${asset.position.x}px`);
+        fallback.style.setProperty("--asset-y", `${asset.position.y}px`);
+        fallback.style.setProperty(
+          "--asset-width",
+          `${asset.dimensions.width}px`
+        );
+        fallback.style.setProperty(
+          "--asset-height",
+          `${asset.dimensions.height}px`
+        );
+
+        // Fallback-specific styling
+        fallback.style.backgroundColor = "rgba(200, 200, 200, 0.3)";
+        fallback.style.border = "2px solid #ff6b6b";
+        fallback.style.borderRadius = "8px";
+        fallback.style.display = "flex";
+        fallback.style.alignItems = "center";
+        fallback.style.justifyContent = "center";
+        fallback.style.color = "white";
+        fallback.style.fontSize = "12px";
+        fallback.style.fontWeight = "bold";
+        fallback.style.textAlign = "center";
+        fallback.style.textShadow = "1px 1px 2px rgba(0,0,0,0.8)";
+        fallback.innerHTML = `<div>${asset.asset}<br><small>Asset Missing</small></div>`;
+
+        return fallback;
+      }
+
+      // Retry asset loading
+      function retryAssetLoad(asset, attempt = 1) {
+        return new Promise((resolve, reject) => {
+          setTimeout(() => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = () => {
+              if (attempt < MAX_RETRY_ATTEMPTS) {
+                retryAssetLoad(asset, attempt + 1)
+                  .then(resolve)
+                  .catch(reject);
+              } else {
+                reject(
+                  new Error(
+                    `Failed to load asset after ${MAX_RETRY_ATTEMPTS} attempts`
+                  )
+                );
+              }
             };
-            return `/img/${assetFolders[assetType]}/${assetName}.png`;
-        }
-
-        // Create fallback element for failed assets
-        function createFallbackElement(asset) {
-            const fallback = document.createElement('div');
-            fallback.id = asset.id;
-            
-            // Build CSS classes matching main asset element
-            let cssClasses = ['positioned-asset', 'fallback', asset.type];
-            cssClasses.push(asset.revealed ? 'revealed' : 'hidden');
-            
-            if (asset.slot) {
-                const slotType = asset.slot.startsWith('ban') ? 'ban' : 
-                               asset.slot === 'pick' ? 'pick' : 
-                               asset.slot === 'decider' ? 'decider' : asset.slot;
-                cssClasses.push(slotType);
-            }
-            
-            fallback.className = cssClasses.join(' ');
-            
-            // Use CSS custom properties for positioning and sizing
-            fallback.style.setProperty('--asset-x', `${asset.position.x}px`);
-            fallback.style.setProperty('--asset-y', `${asset.position.y}px`);
-            fallback.style.setProperty('--asset-width', `${asset.dimensions.width}px`);
-            fallback.style.setProperty('--asset-height', `${asset.dimensions.height}px`);
-            
-            // Fallback-specific styling
-            fallback.style.backgroundColor = 'rgba(200, 200, 200, 0.3)';
-            fallback.style.border = '2px solid #ff6b6b';
-            fallback.style.borderRadius = '8px';
-            fallback.style.display = 'flex';
-            fallback.style.alignItems = 'center';
-            fallback.style.justifyContent = 'center';
-            fallback.style.color = 'white';
-            fallback.style.fontSize = '12px';
-            fallback.style.fontWeight = 'bold';
-            fallback.style.textAlign = 'center';
-            fallback.style.textShadow = '1px 1px 2px rgba(0,0,0,0.8)';
-            fallback.innerHTML = `<div>${asset.asset}<br><small>Asset Missing</small></div>`;
-            
-            return fallback;
-        }
-
-        // Retry asset loading
-        function retryAssetLoad(asset, attempt = 1) {
-            return new Promise((resolve, reject) => {
-                setTimeout(() => {
-                    const img = new Image();
-                    img.onload = () => resolve(img);
-                    img.onerror = () => {
-                        if (attempt < MAX_RETRY_ATTEMPTS) {
-                            console.log(`Retry attempt ${attempt + 1} for asset: ${asset.asset}`);
-                            retryAssetLoad(asset, attempt + 1).then(resolve).catch(reject);
-                        } else {
-                            reject(new Error(`Failed to load asset after ${MAX_RETRY_ATTEMPTS} attempts`));
-                        }
-                    };
-                    img.src = getAssetFilePath(asset.asset, asset.type);
-                }, RETRY_DELAY);
-            });
-        }
-
-        // Create positioned asset element with CSS-based styling
-        function createAssetElement(asset) {
-            // Check if this asset has already failed permanently
-            if (failedAssets.has(asset.id)) {
-                return createFallbackElement(asset);
-            }
-
-            const img = document.createElement('img');
-            img.id = asset.id;
-            
-            // Build CSS classes with phase-specific styling
-            let cssClasses = ['positioned-asset', asset.type];
-            cssClasses.push(asset.revealed ? 'revealed' : 'hidden');
-            
-            // Add slot-specific classes for styling variants
-            if (asset.slot) {
-                const slotType = asset.slot.startsWith('ban') ? 'ban' : 
-                               asset.slot === 'pick' ? 'pick' : 
-                               asset.slot === 'decider' ? 'decider' : asset.slot;
-                cssClasses.push(slotType);
-            }
-            
-            img.className = cssClasses.join(' ');
             img.src = getAssetFilePath(asset.asset, asset.type);
-            
-            // Use CSS custom properties for dynamic positioning and sizing
-            img.style.setProperty('--asset-x', `${asset.position.x}px`);
-            img.style.setProperty('--asset-y', `${asset.position.y}px`);
-            img.style.setProperty('--asset-width', `${asset.dimensions.width}px`);
-            img.style.setProperty('--asset-height', `${asset.dimensions.height}px`);
-            
-            img.alt = `${asset.player} ${asset.slot} - ${asset.asset}`;
-            
-            // Enhanced error handling with retry logic
-            img.onerror = function() {
-                console.warn(`Failed to load asset: ${img.src}`);
-                
-                const currentAttempts = retryAttempts.get(asset.id) || 0;
-                
-                if (currentAttempts < MAX_RETRY_ATTEMPTS) {
-                    retryAttempts.set(asset.id, currentAttempts + 1);
-                    console.log(`Attempting to retry loading asset: ${asset.asset} (attempt ${currentAttempts + 1})`);
-                    
-                    // Attempt retry
-                    retryAssetLoad(asset, currentAttempts + 1)
-                        .then((successImg) => {
-                            // Replace failed image with successfully loaded one
-                            img.src = successImg.src;
-                            retryAttempts.delete(asset.id);
-                            console.log(`Successfully loaded asset on retry: ${asset.asset}`);
-                        })
-                        .catch(() => {
-                            // Final failure - mark as permanently failed
-                            failedAssets.add(asset.id);
-                            retryAttempts.delete(asset.id);
-                            
-                            // Replace with fallback element
-                            const fallback = createFallbackElement(asset);
-                            img.parentNode?.replaceChild(fallback, img);
-                            
-                            console.error(`Permanently failed to load asset: ${asset.asset}`);
-                        });
-                } else {
-                    // Already at max attempts, create fallback immediately
-                    failedAssets.add(asset.id);
-                    
-                    const fallback = createFallbackElement(asset);
-                    img.parentNode?.replaceChild(fallback, img);
-                }
-            };
-            
-            // Add successful load handler
-            img.onload = function() {
-                // Clear any previous failure state
-                failedAssets.delete(asset.id);
+          }, RETRY_DELAY);
+        });
+      }
+
+      // Create positioned asset element with CSS-based styling
+      function createAssetElement(asset) {
+        // Check if this asset has already failed permanently
+        if (failedAssets.has(asset.id)) {
+          return createFallbackElement(asset);
+        }
+
+        const img = document.createElement("img");
+        img.id = asset.id;
+
+        // Build CSS classes with phase-specific styling
+        let cssClasses = ["positioned-asset", asset.type];
+        cssClasses.push(asset.revealed ? "revealed" : "hidden");
+
+        // Add slot-specific classes for styling variants
+        if (asset.slot) {
+          const slotType = asset.slot.startsWith("ban")
+            ? "ban"
+            : asset.slot === "pick"
+            ? "pick"
+            : asset.slot === "decider"
+            ? "decider"
+            : asset.slot;
+          cssClasses.push(slotType);
+        }
+
+        img.className = cssClasses.join(" ");
+        img.src = getAssetFilePath(asset.asset, asset.type);
+
+        // Use CSS custom properties for dynamic positioning and sizing
+        img.style.setProperty("--asset-x", `${asset.position.x}px`);
+        img.style.setProperty("--asset-y", `${asset.position.y}px`);
+        img.style.setProperty("--asset-width", `${asset.dimensions.width}px`);
+        img.style.setProperty("--asset-height", `${asset.dimensions.height}px`);
+
+        img.alt = `${asset.player} ${asset.slot} - ${asset.asset}`;
+
+        // Enhanced error handling with retry logic
+        img.onerror = function () {
+          console.warn(`Failed to load asset: ${img.src}`);
+
+          const currentAttempts = retryAttempts.get(asset.id) || 0;
+
+          if (currentAttempts < MAX_RETRY_ATTEMPTS) {
+            retryAttempts.set(asset.id, currentAttempts + 1);
+
+            // Attempt retry
+            retryAssetLoad(asset, currentAttempts + 1)
+              .then((successImg) => {
+                // Replace failed image with successfully loaded one
+                img.src = successImg.src;
                 retryAttempts.delete(asset.id);
-            };
-            
-            return img;
-        }
+              })
+              .catch(() => {
+                // Final failure - mark as permanently failed
+                failedAssets.add(asset.id);
+                retryAttempts.delete(asset.id);
 
-        // Calculate positioned assets for current tournament state with phase-specific coordinates
-        function calculatePositionedAssets(state) {
-            const assets = [];
-            const { currentPhase, mapsBanned, mapsPicked, deciderMap, agentsBanned, agentPicks, timerState } = state;
+                // Replace with fallback element
+                const fallback = createFallbackElement(asset);
+                img.parentNode?.replaceChild(fallback, img);
 
-            // Get phase-specific coordinates and dimensions
-            const coords = PHASE_COORDINATES[currentPhase] || PHASE_COORDINATES['MAP_PHASE'];
+                console.error(
+                  `Permanently failed to load asset: ${asset.asset}`
+                );
+              });
+          } else {
+            // Already at max attempts, create fallback immediately
+            failedAssets.add(asset.id);
 
-            // Determine if we should reveal assets (explicit: only on finished or in conclusion)
-            const shouldRevealAssets = timerState === 'finished' || currentPhase === 'CONCLUSION';
+            const fallback = createFallbackElement(asset);
+            img.parentNode?.replaceChild(fallback, img);
+          }
+        };
 
-            // Map assets (shown in MAP_PHASE and CONCLUSION)
-            if (currentPhase === 'MAP_PHASE' || currentPhase === 'CONCLUSION') {
+        // Add successful load handler
+        img.onload = function () {
+          // Clear any previous failure state
+          failedAssets.delete(asset.id);
+          retryAttempts.delete(asset.id);
+        };
 
-                // P1 Map Bans
-                if (mapsBanned?.P1 && coords.p1MapBans) {
-                    mapsBanned.P1.forEach((map, index) => {
-                        if (map && coords.p1MapBans[index]) {
-                            const assetId = `p1-map-ban-${index + 1}`;
-                            const isRevealed = shouldRevealAssets || revealedAssets.has(assetId);
-                            
-                            assets.push({
-                                id: assetId,
-                                type: 'map',
-                                asset: map,
-                                position: { x: coords.p1MapBans[index].x, y: coords.p1MapBans[index].y },
-                                dimensions: { width: coords.p1MapBans[index].width, height: coords.p1MapBans[index].height },
-                                revealed: isRevealed,
-                                player: 'P1',
-                                slot: `ban${index + 1}`
-                            });
-                            
-                            if (isRevealed) revealedAssets.add(assetId);
-                        }
-                    });
-                }
+        return img;
+      }
 
-                // P2 Map Bans
-                if (mapsBanned?.P2 && coords.p2MapBans) {
-                    mapsBanned.P2.forEach((map, index) => {
-                        if (map && coords.p2MapBans[index]) {
-                            const assetId = `p2-map-ban-${index + 1}`;
-                            const isRevealed = shouldRevealAssets || revealedAssets.has(assetId);
-                            
-                            assets.push({
-                                id: assetId,
-                                type: 'map',
-                                asset: map,
-                                position: { x: coords.p2MapBans[index].x, y: coords.p2MapBans[index].y },
-                                dimensions: { width: coords.p2MapBans[index].width, height: coords.p2MapBans[index].height },
-                                revealed: isRevealed,
-                                player: 'P2',
-                                slot: `ban${index + 1}`
-                            });
-                            if (isRevealed) revealedAssets.add(assetId);
-                        }
-                    });
-                }
+      // Calculate positioned assets for current tournament state with phase-specific coordinates
+      function calculatePositionedAssets(state) {
+        const assets = [];
+        const {
+          currentPhase,
+          mapsBanned,
+          mapsPicked,
+          deciderMap,
+          agentsBanned,
+          agentPicks,
+          timerState,
+        } = state;
 
-                // P1 Map Pick
-                if (mapsPicked?.P1 && coords.mapPicks?.p1) {
-                    const assetId = 'p1-map-pick';
-                    const isRevealed = shouldRevealAssets || revealedAssets.has(assetId);
-                    assets.push({
-                        id: assetId,
-                        type: 'map',
-                        asset: mapsPicked.P1,
-                        position: { x: coords.mapPicks.p1.x, y: coords.mapPicks.p1.y },
-                        dimensions: { width: coords.mapPicks.p1.width, height: coords.mapPicks.p1.height },
-                        revealed: isRevealed,
-                        player: 'P1',
-                        slot: 'pick'
-                    });
-                    if (isRevealed) revealedAssets.add(assetId);
-                }
+        // Get phase-specific coordinates and dimensions
+        const coords =
+          PHASE_COORDINATES[currentPhase] || PHASE_COORDINATES["MAP_PHASE"];
 
-                // P2 Map Pick
-                if (mapsPicked?.P2 && coords.mapPicks?.p2) {
-                    const assetId = 'p2-map-pick';
-                    const isRevealed = shouldRevealAssets || revealedAssets.has(assetId);
-                    assets.push({
-                        id: assetId,
-                        type: 'map',
-                        asset: mapsPicked.P2,
-                        position: { x: coords.mapPicks.p2.x, y: coords.mapPicks.p2.y },
-                        dimensions: { width: coords.mapPicks.p2.width, height: coords.mapPicks.p2.height },
-                        revealed: isRevealed,
-                        player: 'P2',
-                        slot: 'pick'
-                    });
-                    if (isRevealed) revealedAssets.add(assetId);
-                }
+        // Determine if we should reveal assets (explicit: only on finished or in conclusion)
+        const shouldRevealAssets =
+          timerState === "finished" || currentPhase === "CONCLUSION";
 
-                // Decider Map
-                if (deciderMap && coords.mapPicks?.decider) {
-                    const assetId = 'decider-map';
-                    const isRevealed = shouldRevealAssets || revealedAssets.has(assetId);
-                    assets.push({
-                        id: assetId,
-                        type: 'map',
-                        asset: deciderMap,
-                        position: { x: coords.mapPicks.decider.x, y: coords.mapPicks.decider.y },
-                        dimensions: { width: coords.mapPicks.decider.width, height: coords.mapPicks.decider.height },
-                        revealed: isRevealed,
-                        player: 'shared',
-                        slot: 'decider'
-                    });
-                    if (isRevealed) revealedAssets.add(assetId);
-                }
-            }
+        // Map assets (shown in MAP_PHASE and CONCLUSION)
+        if (currentPhase === "MAP_PHASE" || currentPhase === "CONCLUSION") {
+          // P1 Map Bans
+          if (mapsBanned?.P1 && coords.p1MapBans) {
+            mapsBanned.P1.forEach((map, index) => {
+              if (map && coords.p1MapBans[index]) {
+                const assetId = `p1-map-ban-${index + 1}`;
+                const isRevealed =
+                  shouldRevealAssets || revealedAssets.has(assetId);
 
-            // Agent assets (shown in AGENT_PHASE and CONCLUSION)
-            if (currentPhase === 'AGENT_PHASE' || currentPhase === 'CONCLUSION') {
-
-                // P1 Agent Bans
-                if (agentsBanned?.P1 && coords.p1AgentBans) {
-                    agentsBanned.P1.forEach((agent, index) => {
-                        if (agent && coords.p1AgentBans[index]) {
-                            const assetId = `p1-agent-ban-${index + 1}`;
-                            const isRevealed = shouldRevealAssets || revealedAssets.has(assetId);
-                            assets.push({
-                                id: assetId,
-                                type: 'agent-icon',
-                                asset: agent,
-                                position: { x: coords.p1AgentBans[index].x, y: coords.p1AgentBans[index].y },
-                                dimensions: { width: coords.p1AgentBans[index].width, height: coords.p1AgentBans[index].height },
-                                revealed: isRevealed,
-                                player: 'P1',
-                                slot: `ban${index + 1}`
-                            });
-                            if (isRevealed) revealedAssets.add(assetId);
-                        }
-                    });
-                }
-
-                // P2 Agent Bans
-                if (agentsBanned?.P2 && coords.p2AgentBans) {
-                    agentsBanned.P2.forEach((agent, index) => {
-                        if (agent && coords.p2AgentBans[index]) {
-                            const assetId = `p2-agent-ban-${index + 1}`;
-                            const isRevealed = shouldRevealAssets || revealedAssets.has(assetId);
-                            assets.push({
-                                id: assetId,
-                                type: 'agent-icon',
-                                asset: agent,
-                                position: { x: coords.p2AgentBans[index].x, y: coords.p2AgentBans[index].y },
-                                dimensions: { width: coords.p2AgentBans[index].width, height: coords.p2AgentBans[index].height },
-                                revealed: isRevealed,
-                                player: 'P2',
-                                slot: `ban${index + 1}`
-                            });
-                            if (isRevealed) revealedAssets.add(assetId);
-                        }
-                    });
-                }
-
-                // P1 Agent Pick
-                if (agentPicks?.P1 && coords.agentPicks?.p1) {
-                    const assetId = 'p1-agent-pick';
-                    const isRevealed = shouldRevealAssets || revealedAssets.has(assetId);
-                    assets.push({
-                        id: assetId,
-                        type: 'agent-banner',
-                        asset: agentPicks.P1,
-                        position: { x: coords.agentPicks.p1.x, y: coords.agentPicks.p1.y },
-                        dimensions: { width: coords.agentPicks.p1.width, height: coords.agentPicks.p1.height },
-                        revealed: isRevealed,
-                        player: 'P1',
-                        slot: 'pick'
-                    });
-                    if (isRevealed) revealedAssets.add(assetId);
-                }
-
-                // P2 Agent Pick
-                if (agentPicks?.P2 && coords.agentPicks?.p2) {
-                    const assetId = 'p2-agent-pick';
-                    const isRevealed = shouldRevealAssets || revealedAssets.has(assetId);
-                    assets.push({
-                        id: assetId,
-                        type: 'agent-banner',
-                        asset: agentPicks.P2,
-                        position: { x: coords.agentPicks.p2.x, y: coords.agentPicks.p2.y },
-                        dimensions: { width: coords.agentPicks.p2.width, height: coords.agentPicks.p2.height },
-                        revealed: isRevealed,
-                        player: 'P2',
-                        slot: 'pick'
-                    });
-                    if (isRevealed) revealedAssets.add(assetId);
-                }
-            }
-
-            return assets;
-        }
-
-        // Manual asset reveal function with staggered animation
-        function revealPendingAssets(staggered = true) {
-            const currentAssets = calculatePositionedAssets(tournamentState);
-            const unrevealed = currentAssets.filter(asset => !revealedAssets.has(asset.id));
-            
-            if (!staggered || unrevealed.length <= 1) {
-                // Reveal all at once
-                currentAssets.forEach(asset => {
-                    revealedAssets.add(asset.id);
+                assets.push({
+                  id: assetId,
+                  type: "map",
+                  asset: map,
+                  position: {
+                    x: coords.p1MapBans[index].x,
+                    y: coords.p1MapBans[index].y,
+                  },
+                  dimensions: {
+                    width: coords.p1MapBans[index].width,
+                    height: coords.p1MapBans[index].height,
+                  },
+                  revealed: isRevealed,
+                  player: "P1",
+                  slot: `ban${index + 1}`,
                 });
-                updateAssetPositions(tournamentState);
-            } else {
-                // Staggered reveal animation
-                unrevealed.forEach((asset, index) => {
-                    setTimeout(() => {
-                        revealedAssets.add(asset.id);
-                        
-                        // Update just this asset with animation
-                        const assetElement = document.getElementById(asset.id);
-                        if (assetElement) {
-                            assetElement.style.animationDelay = '0s';
-                            assetElement.classList.remove('hidden');
-                            assetElement.classList.add('revealed');
-                            
-                            // Add a sparkle effect
-                            assetElement.style.animation = 'asset-reveal-sparkle 0.6s ease-out';
-                        }
-                        
-                        // Update full display on last item
-                        if (index === unrevealed.length - 1) {
-                            setTimeout(() => updateAssetPositions(tournamentState), 100);
-                        }
-                    }, index * 200); // 200ms delay between each asset
+
+                if (isRevealed) revealedAssets.add(assetId);
+              }
+            });
+          }
+
+          // P2 Map Bans
+          if (mapsBanned?.P2 && coords.p2MapBans) {
+            mapsBanned.P2.forEach((map, index) => {
+              if (map && coords.p2MapBans[index]) {
+                const assetId = `p2-map-ban-${index + 1}`;
+                const isRevealed =
+                  shouldRevealAssets || revealedAssets.has(assetId);
+
+                assets.push({
+                  id: assetId,
+                  type: "map",
+                  asset: map,
+                  position: {
+                    x: coords.p2MapBans[index].x,
+                    y: coords.p2MapBans[index].y,
+                  },
+                  dimensions: {
+                    width: coords.p2MapBans[index].width,
+                    height: coords.p2MapBans[index].height,
+                  },
+                  revealed: isRevealed,
+                  player: "P2",
+                  slot: `ban${index + 1}`,
                 });
-            }
+                if (isRevealed) revealedAssets.add(assetId);
+              }
+            });
+          }
+
+          // P1 Map Pick
+          if (mapsPicked?.P1 && coords.mapPicks?.p1) {
+            const assetId = "p1-map-pick";
+            const isRevealed =
+              shouldRevealAssets || revealedAssets.has(assetId);
+            assets.push({
+              id: assetId,
+              type: "map",
+              asset: mapsPicked.P1,
+              position: { x: coords.mapPicks.p1.x, y: coords.mapPicks.p1.y },
+              dimensions: {
+                width: coords.mapPicks.p1.width,
+                height: coords.mapPicks.p1.height,
+              },
+              revealed: isRevealed,
+              player: "P1",
+              slot: "pick",
+            });
+            if (isRevealed) revealedAssets.add(assetId);
+          }
+
+          // P2 Map Pick
+          if (mapsPicked?.P2 && coords.mapPicks?.p2) {
+            const assetId = "p2-map-pick";
+            const isRevealed =
+              shouldRevealAssets || revealedAssets.has(assetId);
+            assets.push({
+              id: assetId,
+              type: "map",
+              asset: mapsPicked.P2,
+              position: { x: coords.mapPicks.p2.x, y: coords.mapPicks.p2.y },
+              dimensions: {
+                width: coords.mapPicks.p2.width,
+                height: coords.mapPicks.p2.height,
+              },
+              revealed: isRevealed,
+              player: "P2",
+              slot: "pick",
+            });
+            if (isRevealed) revealedAssets.add(assetId);
+          }
+
+          // Decider Map
+          if (deciderMap && coords.mapPicks?.decider) {
+            const assetId = "decider-map";
+            const isRevealed =
+              shouldRevealAssets || revealedAssets.has(assetId);
+            assets.push({
+              id: assetId,
+              type: "map",
+              asset: deciderMap,
+              position: {
+                x: coords.mapPicks.decider.x,
+                y: coords.mapPicks.decider.y,
+              },
+              dimensions: {
+                width: coords.mapPicks.decider.width,
+                height: coords.mapPicks.decider.height,
+              },
+              revealed: isRevealed,
+              player: "shared",
+              slot: "decider",
+            });
+            if (isRevealed) revealedAssets.add(assetId);
+          }
         }
 
-        // Reset asset reveal state for new phases
-        function resetAssetRevealState() {
-            pendingAssets.clear();
-            // Preserve revealed assets across phase transitions to prevent them from disappearing
-            // Do not clear revealedAssets here; existing assets should remain visible once revealed
-        }
+        // Agent assets (shown in AGENT_PHASE and CONCLUSION)
+        if (currentPhase === "AGENT_PHASE" || currentPhase === "CONCLUSION") {
+          // P1 Agent Bans
+          if (agentsBanned?.P1 && coords.p1AgentBans) {
+            agentsBanned.P1.forEach((agent, index) => {
+              if (agent && coords.p1AgentBans[index]) {
+                const assetId = `p1-agent-ban-${index + 1}`;
+                const isRevealed =
+                  shouldRevealAssets || revealedAssets.has(assetId);
+                assets.push({
+                  id: assetId,
+                  type: "agent-icon",
+                  asset: agent,
+                  position: {
+                    x: coords.p1AgentBans[index].x,
+                    y: coords.p1AgentBans[index].y,
+                  },
+                  dimensions: {
+                    width: coords.p1AgentBans[index].width,
+                    height: coords.p1AgentBans[index].height,
+                  },
+                  revealed: isRevealed,
+                  player: "P1",
+                  slot: `ban${index + 1}`,
+                });
+                if (isRevealed) revealedAssets.add(assetId);
+              }
+            });
+          }
 
-        // Error recovery functions
-        function clearFailedAssets() {
-            failedAssets.clear();
-            retryAttempts.clear();
-            console.log('Cleared all failed asset states');
-        }
+          // P2 Agent Bans
+          if (agentsBanned?.P2 && coords.p2AgentBans) {
+            agentsBanned.P2.forEach((agent, index) => {
+              if (agent && coords.p2AgentBans[index]) {
+                const assetId = `p2-agent-ban-${index + 1}`;
+                const isRevealed =
+                  shouldRevealAssets || revealedAssets.has(assetId);
+                assets.push({
+                  id: assetId,
+                  type: "agent-icon",
+                  asset: agent,
+                  position: {
+                    x: coords.p2AgentBans[index].x,
+                    y: coords.p2AgentBans[index].y,
+                  },
+                  dimensions: {
+                    width: coords.p2AgentBans[index].width,
+                    height: coords.p2AgentBans[index].height,
+                  },
+                  revealed: isRevealed,
+                  player: "P2",
+                  slot: `ban${index + 1}`,
+                });
+                if (isRevealed) revealedAssets.add(assetId);
+              }
+            });
+          }
 
-        function retryFailedAssets() {
-            const failedIds = Array.from(failedAssets);
-            failedAssets.clear();
-            retryAttempts.clear();
-            
-            console.log(`Attempting to retry ${failedIds.length} failed assets`);
-            updateAssetPositions(tournamentState);
-        }
-
-        // Diagnostic functions
-        function getAssetDiagnostics() {
-            return {
-                pendingAssets: Array.from(pendingAssets),
-                revealedAssets: Array.from(revealedAssets),
-                failedAssets: Array.from(failedAssets),
-                retryAttempts: Object.fromEntries(retryAttempts),
-                tournamentPhase: tournamentState.currentPhase,
-                timerState: tournamentState.timerState
+          // P1 Agent Pick
+          if (agentPicks?.P1 && coords.agentPicks?.p1) {
+            const assetId = "p1-agent-pick";
+            const isRevealed =
+              shouldRevealAssets || revealedAssets.has(assetId);
+            const assetData = {
+              id: assetId,
+              type: "agent-banner",
+              asset: agentPicks.P1,
+              position: {
+                x: coords.agentPicks.p1.x,
+                y: coords.agentPicks.p1.y,
+              },
+              dimensions: {
+                width: coords.agentPicks.p1.width,
+                height: coords.agentPicks.p1.height,
+              },
+              revealed: isRevealed,
+              player: "P1",
+              slot: "pick",
             };
-        }
 
-        function validateAssetPaths() {
-            const assets = calculatePositionedAssets(tournamentState);
-            const validation = {
-                totalAssets: assets.length,
-                validPaths: [],
-                invalidPaths: [],
-                checks: []
+            assets.push(assetData);
+            if (isRevealed) revealedAssets.add(assetId);
+          }
+
+          // P2 Agent Pick
+          if (agentPicks?.P2 && coords.agentPicks?.p2) {
+            const assetId = "p2-agent-pick";
+            const isRevealed =
+              shouldRevealAssets || revealedAssets.has(assetId);
+            const assetData = {
+              id: assetId,
+              type: "agent-banner",
+              asset: agentPicks.P2,
+              position: {
+                x: coords.agentPicks.p2.x,
+                y: coords.agentPicks.p2.y,
+              },
+              dimensions: {
+                width: coords.agentPicks.p2.width,
+                height: coords.agentPicks.p2.height,
+              },
+              revealed: isRevealed,
+              player: "P2",
+              slot: "pick",
             };
 
-            assets.forEach(asset => {
-                const path = getAssetFilePath(asset.asset, asset.type);
-                const img = new Image();
-                
-                img.onload = () => {
-                    validation.validPaths.push({ asset: asset.asset, path, type: asset.type });
-                    validation.checks.push({ asset: asset.asset, status: 'valid', path });
-                };
-                
-                img.onerror = () => {
-                    validation.invalidPaths.push({ asset: asset.asset, path, type: asset.type });
-                    validation.checks.push({ asset: asset.asset, status: 'invalid', path });
-                };
-                
-                img.src = path;
-            });
-
-            return validation;
+            assets.push(assetData);
+            if (isRevealed) revealedAssets.add(assetId);
+          }
         }
 
-        // Update asset positions on overlay
-        function updateAssetPositions(state) {
-            const assetContainer = document.getElementById('asset-container');
-            if (!assetContainer) return;
+        return assets;
+      }
 
-            // Calculate new positioned assets
-            const assets = calculatePositionedAssets(state);
-            
-            // Get existing assets to avoid recreating them unnecessarily
-            const existingAssets = new Map();
-            Array.from(assetContainer.children).forEach(element => {
-                if (element.id) {
-                    existingAssets.set(element.id, element);
-                }
-            });
-            
-            // Track which assets should exist
-            const shouldExist = new Set(assets.map(asset => asset.id));
-            
-            // Remove assets that shouldn't exist anymore
-            existingAssets.forEach((element, id) => {
-                if (!shouldExist.has(id)) {
-                    element.remove();
-                    existingAssets.delete(id);
-                }
-            });
-            
-            assets.forEach(asset => {
-                let assetElement = existingAssets.get(asset.id);
-                const isNewAsset = !assetElement;
-                
-                if (isNewAsset) {
-                    // Create new asset element
-                    assetElement = createAssetElement(asset);
-                    assetContainer.appendChild(assetElement);
-                    
-                    // Apply animation for newly revealed assets (maps and agents)
-                    if (asset.revealed && !animatedAssets.has(asset.id)) {
-                        // Map animations
-                        if (asset.type === 'map' && asset.slot && (asset.slot.startsWith('ban') || asset.slot === 'pick' || asset.slot === 'decider')) {
-                            assetElement.classList.add('revealing');
-                            animatedAssets.add(asset.id);
-                            
-                            // Remove revealing class after animation completes
-                            setTimeout(() => {
-                                assetElement.classList.remove('revealing');
-                            }, 1500);
-                        }
-                        // Agent animations
-                        else if (asset.type === 'agent-icon' && asset.slot && asset.slot.startsWith('ban')) {
-                            assetElement.classList.add('revealing');
-                            animatedAssets.add(asset.id);
-                            
-                            // Remove revealing class after animation completes (1s for agent ban)
-                            setTimeout(() => {
-                                assetElement.classList.remove('revealing');
-                            }, 1000);
-                        }
-                        else if (asset.type === 'agent-banner' && asset.slot === 'pick') {
-                            assetElement.classList.add('revealing');
-                            animatedAssets.add(asset.id);
-                            
-                            // Remove revealing class after animation completes (1.5s for agent pick)
-                            setTimeout(() => {
-                                assetElement.classList.remove('revealing');
-                            }, 1500);
-                        }
-                    }
-                } else {
-                    // Update existing asset element
-                    // Update visibility state
-                    if (asset.revealed) {
-                        assetElement.classList.remove('hidden');
-                        assetElement.classList.add('revealed');
-                        
-                        // Apply animation for newly revealed assets (maps and agents) if not already animated
-                        if (!animatedAssets.has(asset.id)) {
-                            // Map animations
-                            if (asset.type === 'map' && asset.slot && (asset.slot.startsWith('ban') || asset.slot === 'pick' || asset.slot === 'decider')) {
-                                assetElement.classList.add('revealing');
-                                animatedAssets.add(asset.id);
-                                
-                                // Remove revealing class after animation completes
-                                setTimeout(() => {
-                                    assetElement.classList.remove('revealing');
-                                }, 1500);
-                            }
-                            // Agent animations
-                            else if (asset.type === 'agent-icon' && asset.slot && asset.slot.startsWith('ban')) {
-                                assetElement.classList.add('revealing');
-                                animatedAssets.add(asset.id);
-                                
-                                // Remove revealing class after animation completes (1s for agent ban)
-                                setTimeout(() => {
-                                    assetElement.classList.remove('revealing');
-                                }, 1000);
-                            }
-                            else if (asset.type === 'agent-banner' && asset.slot === 'pick') {
-                                assetElement.classList.add('revealing');
-                                animatedAssets.add(asset.id);
-                                
-                                // Remove revealing class after animation completes (1.5s for agent pick)
-                                setTimeout(() => {
-                                    assetElement.classList.remove('revealing');
-                                }, 1500);
-                            }
-                        }
-                    } else {
-                        assetElement.classList.remove('revealed');
-                        assetElement.classList.add('hidden');
-                    }
-                }
-                
-                // Apply visual variants for map assets (ensure classes are applied)
-                if (asset.type === 'map') {
-                    if (asset.slot && asset.slot.startsWith('ban')) {
-                        assetElement.classList.add('ban');
-                    } else if (asset.slot === 'decider') {
-                        assetElement.classList.add('decider');
-                    }
-                }
-            });
+      // Manual asset reveal function with staggered animation
+      function revealPendingAssets(staggered = true) {
+        const currentAssets = calculatePositionedAssets(tournamentState);
+        const unrevealed = currentAssets.filter(
+          (asset) => !revealedAssets.has(asset.id)
+        );
 
-            // Update map slot overlays for phase 1
-            updateMapSlotOverlays(state);
+        if (!staggered || unrevealed.length <= 1) {
+          // Reveal all at once
+          currentAssets.forEach((asset) => {
+            revealedAssets.add(asset.id);
+          });
+          updateAssetPositions(tournamentState);
+        } else {
+          // Staggered reveal animation
+          unrevealed.forEach((asset, index) => {
+            setTimeout(() => {
+              revealedAssets.add(asset.id);
+
+              // Update just this asset with animation
+              const assetElement = document.getElementById(asset.id);
+              if (assetElement) {
+                assetElement.style.animationDelay = "0s";
+                assetElement.classList.remove("hidden");
+                assetElement.classList.add("revealed");
+
+                // Add a sparkle effect
+                assetElement.style.animation =
+                  "asset-reveal-sparkle 0.6s ease-out";
+              }
+
+              // Update full display on last item
+              if (index === unrevealed.length - 1) {
+                setTimeout(() => updateAssetPositions(tournamentState), 100);
+              }
+            }, index * 200); // 200ms delay between each asset
+          });
         }
+      }
 
-        // Build and render map slot overlays based on revealed map actions
-        function updateMapSlotOverlays(state) {
-            const overlay = document.getElementById('map-overlay-container');
-            if (!overlay) return;
+      // Reset asset reveal state for new phases
+      function resetAssetRevealState() {
+        pendingAssets.clear();
+        // Preserve revealed assets across phase transitions to prevent them from disappearing
+        // Do not clear revealedAssets here; existing assets should remain visible once revealed
+      }
 
-            // Only active in map phase
-            if (state.currentPhase !== 'MAP_PHASE') {
-                overlay.innerHTML = '';
-                return;
-            }
+      // Error recovery functions
+      function clearFailedAssets() {
+        failedAssets.clear();
+        retryAttempts.clear();
+      }
 
-            // Determine which maps are banned/picked/decider and revealed
-            const assets = calculatePositionedAssets(state);
-            const mapStates = new Map(); // mapName -> 'ban' | 'pick' | 'decider'
-            for (const a of assets) {
-                if (a.type !== 'map' || !a.revealed) continue;
-                const kind = a.slot && a.slot.startsWith('ban') ? 'ban' : (a.slot === 'decider' ? 'decider' : (a.slot === 'pick' ? 'pick' : null));
-                if (!kind) continue;
-                // Prefer decider over pick, pick over ban
-                const prev = mapStates.get(a.asset);
-                if (!prev || (prev === 'ban' && (kind === 'pick' || kind === 'decider')) || (prev === 'pick' && kind === 'decider')) {
-                    mapStates.set(a.asset, kind);
-                }
-            }
+      function retryFailedAssets() {
+        const failedIds = Array.from(failedAssets);
+        failedAssets.clear();
+        retryAttempts.clear();
 
-            // Get existing overlays to avoid recreating them unnecessarily
-            const existingOverlays = new Map();
-            Array.from(overlay.children).forEach(element => {
-                // Extract map name from coordinates by finding matching MAP_SLOT_COORDS
-                const left = parseInt(element.style.left);
-                const top = parseInt(element.style.top);
-                for (const [mapName, coords] of Object.entries(MAP_SLOT_COORDS)) {
-                    if (coords.x === left && coords.y === top) {
-                        existingOverlays.set(mapName, element);
-                        break;
-                    }
-                }
+        updateAssetPositions(tournamentState);
+      }
+
+      // Diagnostic functions
+      function getAssetDiagnostics() {
+        return {
+          pendingAssets: Array.from(pendingAssets),
+          revealedAssets: Array.from(revealedAssets),
+          failedAssets: Array.from(failedAssets),
+          retryAttempts: Object.fromEntries(retryAttempts),
+          tournamentPhase: tournamentState.currentPhase,
+          timerState: tournamentState.timerState,
+        };
+      }
+
+      function validateAssetPaths() {
+        const assets = calculatePositionedAssets(tournamentState);
+        const validation = {
+          totalAssets: assets.length,
+          validPaths: [],
+          invalidPaths: [],
+          checks: [],
+        };
+
+        assets.forEach((asset) => {
+          const path = getAssetFilePath(asset.asset, asset.type);
+          const img = new Image();
+
+          img.onload = () => {
+            validation.validPaths.push({
+              asset: asset.asset,
+              path,
+              type: asset.type,
             });
-
-            // Track which overlays should exist
-            const shouldExist = new Set(mapStates.keys());
-
-            // Remove overlays that shouldn't exist anymore
-            existingOverlays.forEach((element, mapName) => {
-                if (!shouldExist.has(mapName)) {
-                    element.remove();
-                    existingOverlays.delete(mapName);
-                }
+            validation.checks.push({
+              asset: asset.asset,
+              status: "valid",
+              path,
             });
+          };
 
-            // Create or update overlays
-            for (const [mapName, kind] of mapStates.entries()) {
-                const coords = MAP_SLOT_COORDS[mapName];
-                if (!coords) continue; // unknown map or not on this overlay grid
-                
-                let overlayElement = existingOverlays.get(mapName);
-                const isNewOverlay = !overlayElement;
+          img.onerror = () => {
+            validation.invalidPaths.push({
+              asset: asset.asset,
+              path,
+              type: asset.type,
+            });
+            validation.checks.push({
+              asset: asset.asset,
+              status: "invalid",
+              path,
+            });
+          };
 
-                if (isNewOverlay) {
-                    // Create new overlay element
-                    overlayElement = document.createElement('div');
-                    overlayElement.style.left = `${coords.x}px`;
-                    overlayElement.style.top = `${coords.y}px`;
-                    overlay.appendChild(overlayElement);
-                }
+          img.src = path;
+        });
 
-                // Update overlay class and properties
-                overlayElement.className = `map-slot-overlay ${kind}`;
-                
-                // Animation now works automatically via CSS like banned overlays - no JavaScript needed
-            }
-        }
+        return validation;
+      }
 
-        // Update tournament state with phase-aware container classes
-        function updateTournamentState(newState) {
-            const previousPhase = tournamentState.currentPhase;
-            const previousTimerState = tournamentState.timerState;
-            tournamentState = { ...tournamentState, ...newState };
+      // Update asset positions on overlay
+      function updateAssetPositions(state) {
+        const assetContainer = document.getElementById("asset-container");
+        if (!assetContainer) return;
 
-            // Detect fresh tournament start and fully reset reveal state
-            const isFreshStart = isTournamentAtInitialState(tournamentState);
-            if (isFreshStart) {
-                clearAllAssetState();
-            }
+        // Calculate new positioned assets
+        const assets = calculatePositionedAssets(state);
 
-            // Update team names if changed
-            if (newState.teamNames) {
-                updateTeamNames(newState.teamNames, tournamentState.currentPhase);
-            }
+        // Get existing assets to avoid recreating them unnecessarily
+        const existingAssets = new Map();
+        Array.from(assetContainer.children).forEach((element) => {
+          if (element.id) {
+            existingAssets.set(element.id, element);
+          }
+        });
 
-            // Update phase-specific container classes and background
-            if (newState.currentPhase && newState.currentPhase !== previousPhase) {
-                updatePhaseContainer(newState.currentPhase, previousPhase);
-                updateBackground(newState.currentPhase);
-                // Position team names for new phase
-                positionTeamNames(newState.currentPhase);
-                // Reset asset reveal state for new phase (preserves revealed assets)
-                resetAssetRevealState();
-            }
+        // Track which assets should exist
+        const shouldExist = new Set(assets.map((asset) => asset.id));
 
-            // With T7 gating, overlay renders strictly from revealed flags
-            updateAssetPositions(tournamentState);
+        // Remove assets that shouldn't exist anymore
+        existingAssets.forEach((element, id) => {
+          if (!shouldExist.has(id)) {
+            element.remove();
+            existingAssets.delete(id);
+          }
+        });
 
-            // Update timer readout
-            updateTimerDisplay(tournamentState.timerSeconds, tournamentState.timerState);
-        }
+        assets.forEach((asset) => {
+          let assetElement = existingAssets.get(asset.id);
+          const isNewAsset = !assetElement;
 
-        // Update phase-specific container classes with transitions
-        function updatePhaseContainer(newPhase, previousPhase) {
-            const overlayContent = document.querySelector('.overlay-content');
-            const assetContainer = document.querySelector('.asset-container');
-            if (!overlayContent) return;
+          if (isNewAsset) {
+            // Create new asset element
+            assetElement = createAssetElement(asset);
+            assetContainer.appendChild(assetElement);
 
-            // Remove previous phase classes from both containers
-            overlayContent.classList.remove('phase-map', 'phase-agent', 'phase-conclusion');
-            overlayContent.classList.remove('phase-transition-enter', 'phase-transition-exit');
-            if (assetContainer) {
-                assetContainer.classList.remove('phase-map', 'phase-agent', 'phase-conclusion');
-            }
+            // Apply animation for newly revealed assets (maps and agents)
+            if (asset.revealed && !animatedAssets.has(asset.id)) {
+              // Map animations
+              if (
+                asset.type === "map" &&
+                asset.slot &&
+                (asset.slot.startsWith("ban") ||
+                  asset.slot === "pick" ||
+                  asset.slot === "decider")
+              ) {
+                assetElement.classList.add("revealing");
+                animatedAssets.add(asset.id);
 
-            // Add transition classes
-            if (previousPhase) {
-                overlayContent.classList.add('phase-transition-exit');
+                // Remove revealing class after animation completes
                 setTimeout(() => {
-                    overlayContent.classList.remove('phase-transition-exit');
-                    // Add new phase class to both containers
-                    switch (newPhase) {
-                        case 'MAP_PHASE':
-                            overlayContent.classList.add('phase-map');
-                            if (assetContainer) assetContainer.classList.add('phase-map');
-                            break;
-                        case 'AGENT_PHASE':
-                            overlayContent.classList.add('phase-agent');
-                            if (assetContainer) assetContainer.classList.add('phase-agent');
-                            break;
-                        case 'CONCLUSION':
-                            overlayContent.classList.add('phase-conclusion');
-                            if (assetContainer) assetContainer.classList.add('phase-conclusion');
-                            break;
-                    }
-                    overlayContent.classList.add('phase-transition-enter');
-                    setTimeout(() => {
-                        overlayContent.classList.remove('phase-transition-enter');
-                    }, 800);
-                }, 500);
+                  assetElement.classList.remove("revealing");
+                }, 1500);
+              }
+              // Agent animations
+              else if (
+                asset.type === "agent-icon" &&
+                asset.slot &&
+                asset.slot.startsWith("ban")
+              ) {
+                assetElement.classList.add("revealing");
+                animatedAssets.add(asset.id);
+
+                // Remove revealing class after animation completes (1s for agent ban)
+                setTimeout(() => {
+                  assetElement.classList.remove("revealing");
+                }, 1000);
+              } else if (
+                asset.type === "agent-banner" &&
+                asset.slot === "pick"
+              ) {
+                assetElement.classList.add("revealing");
+                animatedAssets.add(asset.id);
+
+                // Remove revealing class after animation completes (1.5s for agent pick)
+                setTimeout(() => {
+                  assetElement.classList.remove("revealing");
+                }, 1500);
+              }
+            }
+          } else {
+            // Update existing asset element
+            // Update position and dimensions for existing assets
+            assetElement.style.setProperty(
+              "--asset-x",
+              `${asset.position.x}px`
+            );
+            assetElement.style.setProperty(
+              "--asset-y",
+              `${asset.position.y}px`
+            );
+            assetElement.style.setProperty(
+              "--asset-width",
+              `${asset.dimensions.width}px`
+            );
+            assetElement.style.setProperty(
+              "--asset-height",
+              `${asset.dimensions.height}px`
+            );
+
+            // Update visibility state
+            if (asset.revealed) {
+              assetElement.classList.remove("hidden");
+              assetElement.classList.add("revealed");
+
+              // Apply animation for newly revealed assets (maps and agents) if not already animated
+              if (!animatedAssets.has(asset.id)) {
+                // Map animations
+                if (
+                  asset.type === "map" &&
+                  asset.slot &&
+                  (asset.slot.startsWith("ban") ||
+                    asset.slot === "pick" ||
+                    asset.slot === "decider")
+                ) {
+                  assetElement.classList.add("revealing");
+                  animatedAssets.add(asset.id);
+
+                  // Remove revealing class after animation completes
+                  setTimeout(() => {
+                    assetElement.classList.remove("revealing");
+                  }, 1500);
+                }
+                // Agent animations
+                else if (
+                  asset.type === "agent-icon" &&
+                  asset.slot &&
+                  asset.slot.startsWith("ban")
+                ) {
+                  assetElement.classList.add("revealing");
+                  animatedAssets.add(asset.id);
+
+                  // Remove revealing class after animation completes (1s for agent ban)
+                  setTimeout(() => {
+                    assetElement.classList.remove("revealing");
+                  }, 1000);
+                } else if (
+                  asset.type === "agent-banner" &&
+                  asset.slot === "pick"
+                ) {
+                  assetElement.classList.add("revealing");
+                  animatedAssets.add(asset.id);
+
+                  // Remove revealing class after animation completes (1.5s for agent pick)
+                  setTimeout(() => {
+                    assetElement.classList.remove("revealing");
+                  }, 1500);
+                }
+              }
             } else {
-                // Initial phase setup without transition
-                switch (newPhase) {
-                    case 'MAP_PHASE':
-                        overlayContent.classList.add('phase-map');
-                        if (assetContainer) assetContainer.classList.add('phase-map');
-                        break;
-                    case 'AGENT_PHASE':
-                        overlayContent.classList.add('phase-agent');
-                        if (assetContainer) assetContainer.classList.add('phase-agent');
-                        break;
-                    case 'CONCLUSION':
-                        overlayContent.classList.add('phase-conclusion');
-                        if (assetContainer) assetContainer.classList.add('phase-conclusion');
-                        break;
-                }
+              assetElement.classList.remove("revealed");
+              assetElement.classList.add("hidden");
             }
+          }
+
+          // Apply visual variants for map assets (ensure classes are applied)
+          if (asset.type === "map") {
+            if (asset.slot && asset.slot.startsWith("ban")) {
+              assetElement.classList.add("ban");
+            } else if (asset.slot === "decider") {
+              assetElement.classList.add("decider");
+            }
+          }
+        });
+
+        // Update map slot overlays for phase 1
+        updateMapSlotOverlays(state);
+
+        // Update agent slot overlays for phase 2
+        updateAgentSlotOverlays(state);
+      }
+
+      // Build and render map slot overlays based on revealed map actions
+      function updateMapSlotOverlays(state) {
+        const overlay = document.getElementById("map-overlay-container");
+        if (!overlay) return;
+
+        // Only active in map phase
+        if (state.currentPhase !== "MAP_PHASE") {
+          overlay.innerHTML = "";
+          return;
         }
 
-        // Initialize overlay with phase container setup
-        function initialize() {
-            // Set initial phase container class
-            updatePhaseContainer(tournamentState.currentPhase, null);
-            updateBackground(tournamentState.currentPhase);
-            updateTeamNames(tournamentState.teamNames, tournamentState.currentPhase);
-            updateAssetPositions(tournamentState);
-            updateTimerDisplay(tournamentState.timerSeconds, tournamentState.timerState);
-            updateMapSlotOverlays(tournamentState);
+        // Determine which maps are banned/picked/decider and revealed
+        const assets = calculatePositionedAssets(state);
+        const mapStates = new Map(); // mapName -> 'ban' | 'pick' | 'decider'
+        for (const a of assets) {
+          if (a.type !== "map" || !a.revealed) continue;
+          const kind =
+            a.slot && a.slot.startsWith("ban")
+              ? "ban"
+              : a.slot === "decider"
+              ? "decider"
+              : a.slot === "pick"
+              ? "pick"
+              : null;
+          if (!kind) continue;
+          // Prefer decider over pick, pick over ban
+          const prev = mapStates.get(a.asset);
+          if (
+            !prev ||
+            (prev === "ban" && (kind === "pick" || kind === "decider")) ||
+            (prev === "pick" && kind === "decider")
+          ) {
+            mapStates.set(a.asset, kind);
+          }
         }
 
-        // Tauri event listener setup (when available)
-        if (window.__TAURI__) {
-            window.__TAURI__.event.listen('tournament-update', (event) => {
-                updateTournamentState(event.payload);
-            });
+        // Get existing overlays to avoid recreating them unnecessarily
+        const existingOverlays = new Map();
+        Array.from(overlay.children).forEach((element) => {
+          // Extract map name from coordinates by finding matching MAP_SLOT_COORDS
+          const left = parseInt(element.style.left);
+          const top = parseInt(element.style.top);
+          for (const [mapName, coords] of Object.entries(MAP_SLOT_COORDS)) {
+            if (coords.x === left && coords.y === top) {
+              existingOverlays.set(mapName, element);
+              break;
+            }
+          }
+        });
+
+        // Track which overlays should exist
+        const shouldExist = new Set(mapStates.keys());
+
+        // Remove overlays that shouldn't exist anymore
+        existingOverlays.forEach((element, mapName) => {
+          if (!shouldExist.has(mapName)) {
+            element.remove();
+            existingOverlays.delete(mapName);
+          }
+        });
+
+        // Create or update overlays
+        for (const [mapName, kind] of mapStates.entries()) {
+          const coords = MAP_SLOT_COORDS[mapName];
+          if (!coords) continue; // unknown map or not on this overlay grid
+
+          let overlayElement = existingOverlays.get(mapName);
+          const isNewOverlay = !overlayElement;
+
+          if (isNewOverlay) {
+            // Create new overlay element
+            overlayElement = document.createElement("div");
+            overlayElement.style.left = `${coords.x}px`;
+            overlayElement.style.top = `${coords.y}px`;
+            overlay.appendChild(overlayElement);
+          }
+
+          // Update overlay class and properties
+          overlayElement.className = `map-slot-overlay ${kind}`;
+
+          // Animation now works automatically via CSS like banned overlays - no JavaScript needed
+        }
+      }
+
+      // Build and render agent slot overlays based on revealed agent actions
+      function updateAgentSlotOverlays(state) {
+        const overlay = document.getElementById("agent-overlay-container");
+        if (!overlay) return;
+
+        // Only active in agent phase
+        if (state.currentPhase !== "AGENT_PHASE") {
+          overlay.innerHTML = "";
+          return;
         }
 
-        // Local ticking fallback: smoothly animate timer between updates
+        // Determine which agents are banned/picked and revealed
+        const assets = calculatePositionedAssets(state);
+        const agentStates = new Map(); // agentName -> 'ban' | 'pick'
+        for (const a of assets) {
+          if (
+            (a.type !== "agent-icon" && a.type !== "agent-banner") ||
+            !a.revealed
+          )
+            continue;
+          const kind =
+            a.slot && a.slot.startsWith("ban")
+              ? "ban"
+              : a.slot === "pick"
+              ? "pick"
+              : null;
+          if (!kind) continue;
+          // Prefer pick over ban (agent picks are more important than bans for overlay)
+          const prev = agentStates.get(a.asset);
+          if (!prev || (prev === "ban" && kind === "pick")) {
+            agentStates.set(a.asset, kind);
+          }
+        }
+
+        // Get existing overlays to avoid recreating them unnecessarily
+        const existingOverlays = new Map();
+        Array.from(overlay.children).forEach((element) => {
+          // Extract agent name from coordinates by finding matching AGENT_SLOT_COORDS
+          const left = parseInt(element.style.left);
+          const top = parseInt(element.style.top);
+          for (const [agentName, coords] of Object.entries(AGENT_SLOT_COORDS)) {
+            if (coords.x === left && coords.y === top) {
+              existingOverlays.set(agentName, element);
+              break;
+            }
+          }
+        });
+
+        // Track which overlays should exist
+        const shouldExist = new Set(agentStates.keys());
+
+        // Remove overlays that shouldn't exist anymore
+        existingOverlays.forEach((element, agentName) => {
+          if (!shouldExist.has(agentName)) {
+            element.remove();
+            existingOverlays.delete(agentName);
+          }
+        });
+
+        // Create or update overlays
+        for (const [agentName, kind] of agentStates.entries()) {
+          const coords = AGENT_SLOT_COORDS[agentName];
+          if (!coords) continue; // unknown agent or not on this overlay grid
+
+          let overlayElement = existingOverlays.get(agentName);
+          const isNewOverlay = !overlayElement;
+
+          if (isNewOverlay) {
+            // Create new overlay element
+            overlayElement = document.createElement("div");
+            overlayElement.style.left = `${coords.x}px`;
+            overlayElement.style.top = `${coords.y}px`;
+            overlay.appendChild(overlayElement);
+          }
+
+          // Update overlay class and properties
+          overlayElement.className = `agent-slot-overlay ${kind}`;
+        }
+      }
+
+      // Update tournament state with phase-aware container classes
+      function updateTournamentState(newState) {
+        const previousPhase = tournamentState.currentPhase;
+        const previousTimerState = tournamentState.timerState;
+
+        tournamentState = { ...tournamentState, ...newState };
+
+        // Detect fresh tournament start and fully reset reveal state
+        const isFreshStart = isTournamentAtInitialState(tournamentState);
+        if (isFreshStart) {
+          clearAllAssetState();
+        }
+
+        // Update team names if changed
+        if (newState.teamNames) {
+          updateTeamNames(newState.teamNames, tournamentState.currentPhase);
+        }
+
+        // Update phase-specific container classes and background
+        if (newState.currentPhase && newState.currentPhase !== previousPhase) {
+          updatePhaseContainer(newState.currentPhase, previousPhase);
+          updateBackground(newState.currentPhase);
+          // Position team names for new phase
+          positionTeamNames(newState.currentPhase);
+          // Reset asset reveal state for new phase (preserves revealed assets)
+          resetAssetRevealState();
+        }
+
+        // With T7 gating, overlay renders strictly from revealed flags
+        updateAssetPositions(tournamentState);
+
+        // Update timer readout
+        updateTimerDisplay(
+          tournamentState.timerSeconds,
+          tournamentState.timerState
+        );
+      }
+
+      // Update phase-specific container classes with transitions
+      function updatePhaseContainer(newPhase, previousPhase) {
+        const overlayContent = document.querySelector(".overlay-content");
+        const assetContainer = document.querySelector(".asset-container");
+        if (!overlayContent) return;
+
+        // Remove previous phase classes from both containers
+        overlayContent.classList.remove(
+          "phase-map",
+          "phase-agent",
+          "phase-conclusion"
+        );
+        overlayContent.classList.remove(
+          "phase-transition-enter",
+          "phase-transition-exit"
+        );
+        if (assetContainer) {
+          assetContainer.classList.remove(
+            "phase-map",
+            "phase-agent",
+            "phase-conclusion"
+          );
+        }
+
+        // Add transition classes
+        if (previousPhase) {
+          overlayContent.classList.add("phase-transition-exit");
+          setTimeout(() => {
+            overlayContent.classList.remove("phase-transition-exit");
+            // Add new phase class to both containers
+            switch (newPhase) {
+              case "MAP_PHASE":
+                overlayContent.classList.add("phase-map");
+                if (assetContainer) assetContainer.classList.add("phase-map");
+                break;
+              case "AGENT_PHASE":
+                overlayContent.classList.add("phase-agent");
+                if (assetContainer) assetContainer.classList.add("phase-agent");
+                break;
+              case "CONCLUSION":
+                overlayContent.classList.add("phase-conclusion");
+                if (assetContainer)
+                  assetContainer.classList.add("phase-conclusion");
+                break;
+            }
+            overlayContent.classList.add("phase-transition-enter");
+            setTimeout(() => {
+              overlayContent.classList.remove("phase-transition-enter");
+            }, 800);
+          }, 500);
+        } else {
+          // Initial phase setup without transition
+          switch (newPhase) {
+            case "MAP_PHASE":
+              overlayContent.classList.add("phase-map");
+              if (assetContainer) assetContainer.classList.add("phase-map");
+              break;
+            case "AGENT_PHASE":
+              overlayContent.classList.add("phase-agent");
+              if (assetContainer) assetContainer.classList.add("phase-agent");
+              break;
+            case "CONCLUSION":
+              overlayContent.classList.add("phase-conclusion");
+              if (assetContainer)
+                assetContainer.classList.add("phase-conclusion");
+              break;
+          }
+        }
+      }
+
+      // Initialize overlay with phase container setup
+      function initialize() {
+        // Set initial phase container class
+        updatePhaseContainer(tournamentState.currentPhase, null);
+        updateBackground(tournamentState.currentPhase);
+        updateTeamNames(
+          tournamentState.teamNames,
+          tournamentState.currentPhase
+        );
+        updateAssetPositions(tournamentState);
+        updateTimerDisplay(
+          tournamentState.timerSeconds,
+          tournamentState.timerState
+        );
+        updateMapSlotOverlays(tournamentState);
+      }
+
+      // Tauri event listener setup (when available)
+      if (window.__TAURI__) {
+        window.__TAURI__.event.listen("tournament-update", (event) => {
+          updateTournamentState(event.payload);
+        });
+      }
+
+      // Local ticking fallback: smoothly animate timer between updates
+      setInterval(() => {
+        // If running, decrement a local display counter by 1s between admin updates
+        if (tournamentState && tournamentState.timerState === "running") {
+          const next = Math.max(0, (tournamentState.timerSeconds || 0) - 1);
+          // Only visual; do not mutate state other than display
+          const timerEl = document.getElementById("timer-display");
+          if (timerEl) {
+            timerEl.textContent = String(next);
+          }
+          tournamentState.timerSeconds = next;
+        }
+      }, 1000);
+
+      // Web-based testing interface (for development)
+      window.updateOverlay = updateTournamentState;
+      window.revealAssets = revealPendingAssets;
+      window.resetRevealState = resetAssetRevealState;
+
+      // Error handling and diagnostics interface
+      window.clearFailedAssets = clearFailedAssets;
+      window.retryFailedAssets = retryFailedAssets;
+      window.getAssetDiagnostics = getAssetDiagnostics;
+      window.validateAssetPaths = validateAssetPaths;
+
+      // Initialize on load
+      window.addEventListener("load", initialize);
+
+      // Test function for development
+      window.testPhaseTransition = function () {
+        const phases = ["MAP_PHASE", "AGENT_PHASE", "CONCLUSION"];
+        let currentIndex = 0;
+
         setInterval(() => {
-            // If running, decrement a local display counter by 1s between admin updates
-            if (tournamentState && tournamentState.timerState === 'running') {
-                const next = Math.max(0, (tournamentState.timerSeconds || 0) - 1);
-                // Only visual; do not mutate state other than display
-                const timerEl = document.getElementById('timer-display');
-                if (timerEl) {
-                    timerEl.textContent = String(next);
-                }
-                tournamentState.timerSeconds = next;
-            }
-        }, 1000);
+          updateTournamentState({
+            currentPhase: phases[currentIndex % phases.length],
+            teamNames: { P1: "Team Alpha", P2: "Team Bravo" },
+          });
+          currentIndex++;
+        }, 3000);
+      };
 
-        // Web-based testing interface (for development)
-        window.updateOverlay = updateTournamentState;
-        window.revealAssets = revealPendingAssets;
-        window.resetRevealState = resetAssetRevealState;
-        
-        // Error handling and diagnostics interface
-        window.clearFailedAssets = clearFailedAssets;
-        window.retryFailedAssets = retryFailedAssets;
-        window.getAssetDiagnostics = getAssetDiagnostics;
-        window.validateAssetPaths = validateAssetPaths;
+      // Test function for staggered reveal animation
+      window.testStaggeredReveal = function () {
+        // Mock some assets for testing
+        updateTournamentState({
+          currentPhase: "MAP_PHASE",
+          mapsBanned: {
+            P1: ["ascent", "bind", "haven"],
+            P2: ["lotus", "pearl", "split"],
+          },
+          teamNames: { P1: "Team Alpha", P2: "Team Bravo" },
+          timerState: "running",
+        });
 
-        // Initialize on load
-        window.addEventListener('load', initialize);
-
-        // Test function for development
-        window.testPhaseTransition = function() {
-            const phases = ['MAP_PHASE', 'AGENT_PHASE', 'CONCLUSION'];
-            let currentIndex = 0;
-            
-            setInterval(() => {
-                updateTournamentState({ 
-                    currentPhase: phases[currentIndex % phases.length],
-                    teamNames: { P1: 'Team Alpha', P2: 'Team Bravo' }
-                });
-                currentIndex++;
-            }, 3000);
-        };
-
-        // Test function for staggered reveal animation
-        window.testStaggeredReveal = function() {
-            // Mock some assets for testing
-            updateTournamentState({
-                currentPhase: 'MAP_PHASE',
-                mapsBanned: { 
-                    P1: ['ascent', 'bind', 'haven'], 
-                    P2: ['lotus', 'pearl', 'split'] 
-                },
-                teamNames: { P1: 'Team Alpha', P2: 'Team Bravo' },
-                timerState: 'running'
-            });
-            
-            // Reveal with stagger after 2 seconds
-            setTimeout(() => revealPendingAssets(true), 2000);
-        };
+        // Reveal with stagger after 2 seconds
+        setTimeout(() => revealPendingAssets(true), 2000);
+      };
     </script>
-</body>
+  </body>
 </html>
