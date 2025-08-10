@@ -17,7 +17,7 @@ body {
   height: 1080px;
   position: relative;
   overflow: hidden;
-  background: transparent;
+  background: #111010;
   font-family: "iCielBrandonText", Arial, sans-serif;
 }
 
@@ -135,7 +135,7 @@ body {
   position: absolute;
   width: 277px;
   height: 127px;
-  border-radius: 0px;
+  border-radius: 0;
   box-sizing: border-box;
   transition: opacity 0.2s ease-in-out, box-shadow 0.2s ease-in-out,
     background 0.2s ease-in-out;
@@ -216,7 +216,7 @@ body {
   position: absolute;
   width: 137px;
   height: 137px;
-  border-radius: 0px;
+  border-radius: 0;
   box-sizing: border-box;
   transition: opacity 0.2s ease-in-out, box-shadow 0.2s ease-in-out,
     background 0.2s ease-in-out;
@@ -490,7 +490,7 @@ body {
 /* CONCLUSION PHASE - Compact summary view */
 .asset-container.phase-conclusion .positioned-asset.map,
 .overlay-content.phase-conclusion .positioned-asset.map {
-  border-radius: 6px;
+  border-radius: 0;
   object-fit: cover;
   object-position: center center;
 }
