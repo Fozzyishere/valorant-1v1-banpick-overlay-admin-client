@@ -526,6 +526,8 @@ body {
   object-fit: cover;
   border: 2px solid rgba(255, 215, 0, 0.7);
   box-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
+  width: var(--asset-width, 233px);
+  height: var(--asset-height, 584px);
 }
 
 /* Phase transition animations */
