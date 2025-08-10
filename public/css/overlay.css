@@ -1,0 +1,675 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+@font-face {
+  font-family: "iCielBrandonText";
+  src: url("/font/icielBrandonText-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+body {
+  width: 1920px;
+  height: 1080px;
+  position: relative;
+  overflow: hidden;
+  background: transparent;
+  font-family: "iCielBrandonText", Arial, sans-serif;
+}
+
+.background-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+.background-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1920px;
+  height: 1080px;
+  object-fit: none; /* no scaling, use native pixels */
+  object-position: left top; /* anchor at top-left per spec */
+  transition: opacity 0.5s ease-in-out;
+  will-change: opacity;
+}
+
+/* Enhance fade duration specifically during phase 1 -> phase 2 swap */
+.background-container.crossfade .background-image {
+  transition: opacity 0.8s ease-in-out;
+}
+
+.overlay-content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.team-name {
+  position: absolute;
+  color: white;
+  font-size: 48px;
+  font-weight: 700;
+  text-shadow: none;
+  transition: all 0.3s ease-in-out;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 560px;
+}
+
+.team-name.player1 {
+  text-align: left;
+}
+
+.team-name.player2 {
+  text-align: right;
+  /* Align right edge to provided X coordinate using translate */
+  transform: translateX(-100%);
+}
+
+/* Preserve right-edge alignment for player2 on hover */
+.team-name.player1:hover {
+  transform: scale(1.02);
+}
+.team-name.player2:hover {
+  transform: translateX(-100%) scale(1.02);
+}
+
+@keyframes slide-in-left {
+  0% {
+    transform: translateX(-50px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-right {
+  0% {
+    transform: translateX(50px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.asset-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* Map slot overlays for Phase 1 baked-in map grid */
+.map-overlay-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 4; /* above assets to ensure visible highlight */
+  pointer-events: none;
+}
+.map-slot-overlay {
+  position: absolute;
+  width: 277px;
+  height: 127px;
+  border-radius: 0px;
+  box-sizing: border-box;
+  transition: opacity 0.2s ease-in-out, box-shadow 0.2s ease-in-out,
+    background 0.2s ease-in-out;
+}
+.map-slot-overlay.ban {
+  background: rgba(0, 0, 0, 0.55);
+  animation: map-ban-fade-in 1s ease-out;
+}
+
+@keyframes map-ban-fade-in {
+  from {
+    background: rgba(0, 0, 0, 0);
+  }
+  to {
+    background: rgba(0, 0, 0, 0.55);
+  }
+}
+
+@keyframes map-pick-slot-reveal {
+  0% {
+    background: rgba(0, 255, 200, 0.06);
+    border-color: transparent;
+    box-shadow: none;
+  }
+  100% {
+    background: rgba(0, 255, 200, 0.06);
+    border-color: rgba(0, 255, 200, 0.85);
+    box-shadow: 0 0 8px rgba(0, 255, 200, 0.7),
+      0 0 14px rgba(0, 255, 200, 0.45);
+  }
+}
+
+@keyframes map-decider-slot-reveal {
+  0% {
+    background: rgba(248, 235, 126, 0.08);
+    border-color: transparent;
+    box-shadow: none;
+  }
+  100% {
+    background: rgba(248, 235, 126, 0.08);
+    border-color: rgba(248, 235, 126, 0.95);
+    box-shadow: 0 0 8px rgba(248, 235, 126, 0.85),
+      0 0 14px rgba(248, 235, 126, 0.55);
+  }
+}
+
+.map-slot-overlay.pick {
+  background: rgba(0, 255, 200, 0.06);
+  border-width: 2px;
+  border-style: solid;
+  border-color: rgba(0, 255, 200, 0.85);
+  box-shadow: 0 0 8px rgba(0, 255, 200, 0.7),
+    0 0 14px rgba(0, 255, 200, 0.45);
+  animation: map-pick-slot-reveal 1s ease-out;
+}
+
+.map-slot-overlay.decider {
+  background: rgba(248, 235, 126, 0.08);
+  border-width: 2px;
+  border-style: solid;
+  border-color: rgba(248, 235, 126, 0.95);
+  box-shadow: 0 0 8px rgba(248, 235, 126, 0.85),
+    0 0 14px rgba(248, 235, 126, 0.55);
+  animation: map-decider-slot-reveal 1s ease-out;
+}
+
+/* Agent slot overlays for Phase 2 baked-in agent grid */
+.agent-overlay-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 4; /* above assets to ensure visible highlight */
+  pointer-events: none;
+}
+.agent-slot-overlay {
+  position: absolute;
+  width: 137px;
+  height: 137px;
+  border-radius: 0px;
+  box-sizing: border-box;
+  transition: opacity 0.2s ease-in-out, box-shadow 0.2s ease-in-out,
+    background 0.2s ease-in-out;
+}
+.agent-slot-overlay.ban {
+  background: rgba(0, 0, 0, 0.55);
+  animation: agent-ban-fade-in 1s ease-out;
+}
+
+@keyframes agent-ban-fade-in {
+  from {
+    background: rgba(0, 0, 0, 0);
+  }
+  to {
+    background: rgba(0, 0, 0, 0.55);
+  }
+}
+
+@keyframes agent-pick-slot-reveal {
+  0% {
+    background: rgba(255, 215, 0, 0.06);
+    border-color: transparent;
+    box-shadow: none;
+  }
+  100% {
+    background: rgba(255, 215, 0, 0.06);
+    border-color: rgba(255, 215, 0, 0.85);
+    box-shadow: 0 0 8px rgba(255, 215, 0, 0.7),
+      0 0 14px rgba(255, 215, 0, 0.45);
+  }
+}
+
+.agent-slot-overlay.pick {
+  background: rgba(255, 215, 0, 0.06);
+  border-width: 2px;
+  border-style: solid;
+  border-color: rgba(255, 215, 0, 0.85);
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.7),
+    0 0 14px rgba(255, 215, 0, 0.45);
+  animation: agent-pick-slot-reveal 1s ease-out;
+}
+
+/* Base positioned asset styles */
+.positioned-asset {
+  position: absolute;
+  transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  object-fit: contain;
+  transform-origin: center;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+  /* Use CSS custom properties for dynamic positioning and sizing */
+  left: var(--asset-x, 0);
+  top: var(--asset-y, 0);
+  width: var(--asset-width, 120px);
+  height: var(--asset-height, 120px);
+}
+
+.positioned-asset.hidden {
+  opacity: 0;
+  transform: scale(0.8) translateY(20px);
+}
+
+.positioned-asset.revealed {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+
+.positioned-asset:hover {
+  transform: scale(1.05) translateY(-2px);
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.4));
+}
+
+/* Phase-specific container classes */
+.overlay-content.phase-map {
+  --phase-scale: 1;
+}
+
+.overlay-content.phase-agent {
+  --phase-scale: 1;
+}
+
+.overlay-content.phase-conclusion {
+  --phase-scale: 1;
+}
+
+/* Phase-specific asset styling */
+/* MAP PHASE - Small consistent sizing */
+.asset-container.phase-map .positioned-asset.map,
+.overlay-content.phase-map .positioned-asset.map {
+  /* Use object-fit: cover to fill the space while maintaining aspect ratio */
+  object-fit: cover;
+  object-position: center center;
+  /* Ensure container dimensions are respected */
+  width: var(--asset-width, 143px);
+  height: var(--asset-height, 93px);
+}
+
+.asset-container.phase-map .positioned-asset.map.ban,
+.overlay-content.phase-map .positioned-asset.map.ban {
+  filter: grayscale(100%) brightness(0.7) contrast(0.9);
+}
+
+/* Animation class applied only once when asset is first revealed */
+.positioned-asset.map.ban.revealing {
+  animation: map-ban-reveal 1s ease-out;
+}
+
+.positioned-asset.map.pick.revealing {
+  animation: map-pick-reveal 1.5s ease-out;
+}
+
+.positioned-asset.map.decider.revealing {
+  animation: map-decider-reveal 1.5s ease-out;
+}
+
+.positioned-asset.agent-icon.ban.revealing {
+  animation: agent-ban-reveal 1s ease-out;
+}
+
+.positioned-asset.agent-banner.pick.revealing {
+  animation: agent-pick-reveal 1.5s ease-out;
+}
+
+/* Map ban reveal animation */
+@keyframes map-ban-reveal {
+  0% {
+    opacity: 0;
+    filter: grayscale(0%) brightness(1) contrast(1);
+  }
+  100% {
+    opacity: 1;
+    filter: grayscale(100%) brightness(0.7) contrast(0.9);
+  }
+}
+
+/* Map pick reveal animation: 0.75s fade-in + 0.375s glow-up + 0.375s glow-down */
+@keyframes map-pick-reveal {
+  0% {
+    opacity: 0;
+    border-color: rgba(0, 255, 200, 0.6);
+    box-shadow: 0 0 8px rgba(0, 255, 200, 0.4);
+  }
+  50% {
+    /* 0.75s fade-in complete */
+    opacity: 1;
+    border-color: rgba(0, 255, 200, 0.6);
+    box-shadow: 0 0 8px rgba(0, 255, 200, 0.4);
+  }
+  75% {
+    /* 1.125s - peak glow reached */
+    opacity: 1;
+    border-color: rgba(0, 255, 200, 0.9);
+    box-shadow: 0 0 16px rgba(0, 255, 200, 0.7),
+      0 0 24px rgba(0, 255, 200, 0.3);
+  }
+  100% {
+    /* 1.5s - glow down to normal */
+    opacity: 1;
+    border-color: rgba(0, 255, 200, 0.6);
+    box-shadow: 0 0 8px rgba(0, 255, 200, 0.4);
+  }
+}
+
+/* Map decider reveal animation: 0.75s fade-in + 0.375s glow-up + 0.375s glow-down */
+@keyframes map-decider-reveal {
+  0% {
+    opacity: 0;
+    border-color: rgba(248, 235, 126, 0.8);
+    filter: drop-shadow(0 0 4px #f8eb7e)
+      drop-shadow(0 0 8px rgba(248, 235, 126, 0.3));
+  }
+  50% {
+    /* 0.75s fade-in complete */
+    opacity: 1;
+    border-color: rgba(248, 235, 126, 0.8);
+    filter: drop-shadow(0 0 4px #f8eb7e)
+      drop-shadow(0 0 8px rgba(248, 235, 126, 0.3));
+  }
+  75% {
+    /* 1.125s - peak glow reached */
+    opacity: 1;
+    border-color: rgba(248, 235, 126, 1);
+    filter: drop-shadow(0 0 8px #f8eb7e)
+      drop-shadow(0 0 16px rgba(248, 235, 126, 0.6))
+      drop-shadow(0 0 24px rgba(248, 235, 126, 0.2));
+  }
+  100% {
+    /* 1.5s - glow down to normal */
+    opacity: 1;
+    border-color: rgba(248, 235, 126, 0.8);
+    filter: drop-shadow(0 0 4px #f8eb7e)
+      drop-shadow(0 0 8px rgba(248, 235, 126, 0.3));
+  }
+}
+
+/* Agent ban reveal animation: fade-in with grayscale effect */
+@keyframes agent-ban-reveal {
+  0% {
+    opacity: 0;
+    filter: grayscale(0%) brightness(1);
+  }
+  100% {
+    opacity: 1;
+    filter: grayscale(100%) brightness(0.7);
+  }
+}
+
+/* Agent pick reveal animation: fade-in with purple glow */
+@keyframes agent-pick-reveal {
+  0% {
+    opacity: 0;
+    border-color: rgba(255, 215, 0, 0.6);
+    box-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+  }
+  50% {
+    /* 0.75s fade-in complete */
+    opacity: 1;
+    border-color: rgba(255, 215, 0, 0.6);
+    box-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+  }
+  75% {
+    /* 1.125s - peak glow reached */
+    opacity: 1;
+    border-color: rgba(255, 215, 0, 0.9);
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.7),
+      0 0 30px rgba(255, 215, 0, 0.3);
+  }
+  100% {
+    /* 1.5s - glow down to normal */
+    opacity: 1;
+    border-color: rgba(255, 215, 0, 0.6);
+    box-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+  }
+}
+
+.asset-container.phase-map .positioned-asset.map.pick,
+.overlay-content.phase-map .positioned-asset.map.pick {
+  border: 2px solid rgba(0, 255, 200, 0.6);
+  box-shadow: 0 0 8px rgba(0, 255, 200, 0.4);
+}
+
+.asset-container.phase-map .positioned-asset.map.decider,
+.overlay-content.phase-map .positioned-asset.map.decider {
+  border: 2px solid rgba(248, 235, 126, 0.8);
+  filter: drop-shadow(0 0 4px #f8eb7e)
+    drop-shadow(0 0 8px rgba(248, 235, 126, 0.3));
+}
+
+/* AGENT PHASE - Agent-focused styling */
+.asset-container.phase-agent .positioned-asset.agent-icon,
+.overlay-content.phase-agent .positioned-asset.agent-icon {
+  object-fit: contain;
+  object-position: center center;
+  border: 3px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.asset-container.phase-agent .positioned-asset.agent-icon.ban,
+.overlay-content.phase-agent .positioned-asset.agent-icon.ban {
+  filter: grayscale(100%) brightness(0.7);
+  border: none;
+}
+
+.asset-container.phase-agent .positioned-asset.agent-banner,
+.overlay-content.phase-agent .positioned-asset.agent-banner {
+  object-fit: cover;
+  object-position: center center;
+  border: 3px solid rgba(255, 215, 0, 0.6);
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+}
+
+/* CONCLUSION PHASE - Compact summary view */
+.asset-container.phase-conclusion .positioned-asset.map,
+.overlay-content.phase-conclusion .positioned-asset.map {
+  border-radius: 6px;
+  object-fit: cover;
+  object-position: center center;
+}
+
+.asset-container.phase-conclusion .positioned-asset.map.ban,
+.overlay-content.phase-conclusion .positioned-asset.map.ban {
+  filter: grayscale(100%) brightness(0.8) contrast(0.9);
+  border: 1px solid rgba(255, 75, 75, 0.4);
+}
+
+.asset-container.phase-conclusion .positioned-asset.map.pick,
+.overlay-content.phase-conclusion .positioned-asset.map.pick {
+  border: 3px solid rgba(0, 255, 200, 0.8);
+  box-shadow: 0 0 12px rgba(0, 255, 200, 0.6);
+}
+
+.asset-container.phase-conclusion .positioned-asset.map.decider,
+.overlay-content.phase-conclusion .positioned-asset.map.decider {
+  border: 3px solid rgba(248, 235, 126, 0.9);
+  filter: drop-shadow(0 0 6px #f8eb7e)
+    drop-shadow(0 0 12px rgba(248, 235, 126, 0.5));
+}
+
+.asset-container.phase-conclusion .positioned-asset.agent-icon,
+.overlay-content.phase-conclusion .positioned-asset.agent-icon {
+  object-fit: contain;
+  border: 2px solid rgba(255, 75, 75, 0.6);
+  filter: grayscale(100%) brightness(0.8);
+}
+
+.asset-container.phase-conclusion .positioned-asset.agent-banner,
+.overlay-content.phase-conclusion .positioned-asset.agent-banner {
+  object-fit: cover;
+  border: 2px solid rgba(255, 215, 0, 0.7);
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
+}
+
+/* Phase transition animations */
+.overlay-content.phase-transition-enter {
+  animation: phase-enter 0.8s ease-out;
+}
+
+.overlay-content.phase-transition-exit {
+  animation: phase-exit 0.5s ease-in;
+}
+
+@keyframes phase-enter {
+  0% {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes phase-exit {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+}
+
+.positioned-asset.fallback {
+  border: 2px solid #ff6b6b;
+  background: rgba(200, 200, 200, 0.3);
+  backdrop-filter: blur(2px);
+  font-family: "Arial", sans-serif;
+  border-radius: 0;
+  animation: pulse-error 2s infinite;
+}
+
+.positioned-asset.fallback:hover {
+  background: rgba(255, 107, 107, 0.2);
+  animation: pulse-error-fast 1s infinite;
+}
+
+@keyframes pulse-error {
+  0%,
+  100% {
+    border-color: #ff6b6b;
+    background: rgba(200, 200, 200, 0.3);
+  }
+  50% {
+    border-color: #ff9999;
+    background: rgba(255, 107, 107, 0.2);
+  }
+}
+
+@keyframes pulse-error-fast {
+  0%,
+  100% {
+    border-color: #ff6b6b;
+  }
+  50% {
+    border-color: #ffcccc;
+  }
+}
+
+@keyframes asset-reveal-sparkle {
+  0% {
+    opacity: 0;
+    transform: scale(0.5) rotate(-180deg);
+  }
+  50% {
+    transform: scale(1.1) rotate(0deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+/* Global reveal animation for smooth transitions */
+@keyframes global-reveal {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Phase transition overlay effect */
+.phase-transition {
+  animation: global-reveal 1s ease-out;
+}
+
+.hidden {
+  opacity: 0;
+}
+
+.visible {
+  opacity: 1;
+}
+
+/* Timer display styling with phase-specific positioning */
+.timer-display {
+  position: absolute;
+  color: white;
+  font-weight: 700;
+  font-family: "iCielBrandonText", Arial, sans-serif;
+  text-shadow: none;
+  letter-spacing: 1px;
+  transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+  user-select: none;
+}
+
+/* Phase-specific timer positioning */
+.overlay-content.phase-map .timer-display {
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 44px;
+}
+
+.overlay-content.phase-agent .timer-display {
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 42px;
+}
+
+.overlay-content.phase-conclusion .timer-display {
+  display: none;
+}
+
+.timer-display.ready {
+}
+.timer-display.running {
+}
+.timer-display.paused {
+}
+.timer-display.finished {
+}
