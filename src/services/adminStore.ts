@@ -117,7 +117,7 @@ const emitOverlayUpdate = async (state: any) => {
     // Broadcast to connected players via Socket.IO server
     await serverService.broadcastTournamentState(tournamentState);
   } catch (error) {
-    // No error throw yet, just warn for now
+    // TODO: Implement proper error handling for Socket.IO broadcast failures
     console.warn('Socket.IO broadcast failed (server may not be running):', error);
   }
 };

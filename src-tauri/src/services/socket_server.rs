@@ -250,8 +250,8 @@ impl TournamentServer {
                         if let Some(_player) = pm.get_player_by_socket(&socket.id.to_string()) {
                             info!("Received action from player: {} - {}", data.action, data.selection);
                             
-                            // For now, just acknowledge the action
-                            // Full validation will be implemented in Phase 1.3
+                            // TODO: Implement full action validation logic
+                            // Issue: Need to integrate with tournament state for proper validation
                             let response = ActionResponse {
                                 success: true,
                                 error: None,
