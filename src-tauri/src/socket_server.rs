@@ -241,31 +241,30 @@ impl TournamentServer {
                 let player_manager = Arc::clone(&player_manager);
                 move |socket: SocketRef, Data::<PlayerActionRequest>(data)| {
                     let pm_clone = Arc::clone(&player_manager);
-                    tokio::task::block_in_place(|| {
-                        tokio::runtime::Handle::current().block_on(async {
-                            let pm = pm_clone.lock().await;
-                    
-                            // Validate that the player is connected and assigned
-                            if let Some(_player) = pm.get_player_by_socket(&socket.id.to_string()) {
-                                info!("Received action from player: {} - {}", data.action, data.selection);
-                                
-                                // For now, just acknowledge the action
-                                // Full validation will be implemented in Phase 1.3
-                                let response = ActionResponse {
-                                    success: true,
-                                    error: None,
-                                };
-                                socket.emit("action-result", &response).ok();
-                            } else {
-                                warn!("Action from unassigned player: {}", socket.id);
-                                let response = ActionResponse {
-                                    success: false,
-                                    error: Some("Player not assigned".to_string()),
-                                };
-                                socket.emit("action-result", &response).ok();
-                            }
-                        })
-                    })
+                    let socket = socket.clone();
+                    tokio::spawn(async move {
+                        let pm = pm_clone.lock().await;
+                
+                        // Validate that the player is connected and assigned
+                        if let Some(_player) = pm.get_player_by_socket(&socket.id.to_string()) {
+                            info!("Received action from player: {} - {}", data.action, data.selection);
+                            
+                            // For now, just acknowledge the action
+                            // Full validation will be implemented in Phase 1.3
+                            let response = ActionResponse {
+                                success: true,
+                                error: None,
+                            };
+                            socket.emit("action-result", &response).ok();
+                        } else {
+                            warn!("Action from unassigned player: {}", socket.id);
+                            let response = ActionResponse {
+                                success: false,
+                                error: Some("Player not assigned".to_string()),
+                            };
+                            socket.emit("action-result", &response).ok();
+                        }
+                    });
                 }
             });
 
@@ -281,18 +280,16 @@ impl TournamentServer {
                 move |socket: SocketRef, _reason: socketioxide::socket::DisconnectReason| {
                     let pm_clone = Arc::clone(&player_manager);
                     let status_clone = Arc::clone(&status);
-                    tokio::task::block_in_place(|| {
-                        tokio::runtime::Handle::current().block_on(async {
-                            info!("Client disconnected: {}", socket.id);
-                            
-                            let mut pm = pm_clone.lock().await;
-                            pm.remove_player_by_socket(&socket.id.to_string());
-                            
-                            // Update player count
-                            let mut s = status_clone.lock().await;
-                            s.player_count = pm.get_connected_count();
-                        })
-                    })
+                    tokio::spawn(async move {
+                        info!("Client disconnected: {}", socket.id);
+                        
+                        let mut pm = pm_clone.lock().await;
+                        pm.remove_player_by_socket(&socket.id.to_string());
+                        
+                        // Update player count
+                        let mut s = status_clone.lock().await;
+                        s.player_count = pm.get_connected_count();
+                    });
                 }
             });
         });
