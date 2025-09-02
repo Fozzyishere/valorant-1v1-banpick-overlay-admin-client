@@ -71,7 +71,7 @@ export interface TournamentState {
   // Independent timer state
   timerState: TimerState;
   timerSeconds: number; // Current countdown value
-  timerInterval: NodeJS.Timeout | null; // For cleanup
+  timerInterval: number | null; // For cleanup
   
   // Action history for undo and debugging
   actionHistory: TournamentAction[];

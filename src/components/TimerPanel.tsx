@@ -14,8 +14,7 @@ export function TimerPanel() {
     startEvent,
     lastError,
     phaseAdvancePending,
-    advancePhase,
-    currentPhase
+    advancePhase
   } = useTournamentStore();
 
   const formatTime = (seconds: number): string => {
