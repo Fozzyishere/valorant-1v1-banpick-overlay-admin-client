@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { serverService, ServerStatus, PlayerInfo, ServerError } from '../services/serverService';
 
 export function ServerControlPanel() {
@@ -8,6 +8,7 @@ export function ServerControlPanel() {
   const [error, setError] = useState<string | null>(null);
   const [serverPort, setServerPort] = useState(3001);
   const [pollingInterval, setPollingInterval] = useState<number | null>(null);
+  const pollingIntervalRef = useRef<number | null>(null);
 
   // Initialize server status polling
   useEffect(() => {
@@ -34,8 +35,9 @@ export function ServerControlPanel() {
 
     return () => {
       mounted = false;
-      if (pollingInterval) {
-        serverService.stopStatusPolling(pollingInterval);
+      if (pollingIntervalRef.current) {
+        serverService.stopStatusPolling(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
       }
     };
   }, []);
@@ -45,6 +47,7 @@ export function ServerControlPanel() {
 
     const interval = serverService.startStatusPolling(2000); // Poll every 2 seconds
     setPollingInterval(interval);
+    pollingIntervalRef.current = interval;
 
     // Set up event listeners
     serverService.on('status-update', (status: ServerStatus) => {
@@ -64,6 +67,7 @@ export function ServerControlPanel() {
     if (pollingInterval) {
       serverService.stopStatusPolling(pollingInterval);
       setPollingInterval(null);
+      pollingIntervalRef.current = null;
       setConnectedPlayers([]);
     }
   };

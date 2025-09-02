@@ -1,5 +1,9 @@
 import { invoke } from '@tauri-apps/api/core';
 
+// Network port constants
+const MIN_PORT = 1024;  // Minimum non-privileged port
+const MAX_PORT = 65535; // Maximum valid port number
+
 // Types matching Rust backend
 export interface ServerStatus {
   running: boolean;
@@ -56,12 +60,13 @@ class ServerService {
       this.emit('server-started', { port });
       return result;
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       const serverError: ServerError = {
-        message: error as string,
+        message: errorMessage,
         code: 'START_FAILED'
       };
       this.emit('server-error', serverError);
-      throw new Error(`Failed to start server: ${error}`);
+      throw new Error(`Failed to start server: ${errorMessage}`);
     }
   }
 
@@ -71,12 +76,13 @@ class ServerService {
       this.emit('server-stopped');
       return result;
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       const serverError: ServerError = {
-        message: error as string,
+        message: errorMessage,
         code: 'STOP_FAILED'
       };
       this.emit('server-error', serverError);
-      throw new Error(`Failed to stop server: ${error}`);
+      throw new Error(`Failed to stop server: ${errorMessage}`);
     }
   }
 
@@ -189,10 +195,10 @@ class ServerService {
 
   // Validate server configuration
   validatePort(port: number): { valid: boolean; error?: string } {
-    if (!Number.isInteger(port) || port < 1024 || port > 65535) {
+    if (!Number.isInteger(port) || port < MIN_PORT || port > MAX_PORT) {
       return {
         valid: false,
-        error: 'Port must be an integer between 1024 and 65535'
+        error: `Port must be an integer between ${MIN_PORT} and ${MAX_PORT}`
       };
     }
     return { valid: true };

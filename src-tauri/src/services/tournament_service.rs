@@ -424,6 +424,6 @@ mod tests {
         // Should include all maps except "bind" which is banned
         assert!(!options.contains(&"bind".to_string()));
         assert!(options.contains(&"ascent".to_string()));
-        assert!(options.len() == 11); // 12 total - 1 banned
+        assert!(options.len() == ALL_MAPS.len() - 1); // Total maps - 1 banned
     }
 }
