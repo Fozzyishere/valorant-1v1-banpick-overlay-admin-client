@@ -10,8 +10,8 @@ use uuid::Uuid;
 use axum::Router;
 use tower_http::cors::CorsLayer;
 
-use crate::player_manager::{PlayerManager, PlayerInfo};
-use crate::tournament_broadcast::TournamentState;
+use crate::services::player_manager::{PlayerManager, PlayerInfo};
+use crate::services::tournament_service::TournamentState;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServerStatus {
@@ -173,7 +173,7 @@ impl TournamentServer {
     pub async fn broadcast_tournament_state(&self, state: TournamentState) -> Result<(), String> {
         if let Some(ref io) = self.io {
             // Transform admin state to player-compatible format
-            let player_state = crate::tournament_broadcast::transform_for_players(&state);
+            let player_state = crate::services::tournament_service::transform_for_players(&state);
             
             // Broadcast to all connected players
             io.emit("game-state-update", &player_state).ok();

@@ -311,18 +311,7 @@ pub struct TurnStartEvent {
     pub tournament_state: PlayerGameState,
 }
 
-// Game asset constants
-const ALL_MAPS: &[&str] = &[
-    "abyss", "ascent", "bind", "breeze", "corrode", "fracture",
-    "haven", "icebox", "lotus", "pearl", "split", "sunset"
-];
-
-const ALL_AGENTS: &[&str] = &[
-    "astra", "breach", "brimstone", "chamber", "clove", "cypher",
-    "deadlock", "fade", "gekko", "harbor", "iso", "jett", "kayo",
-    "killjoy", "neon", "omen", "phoenix", "raze", "reyna", "sage",
-    "skye", "sova", "tejo", "viper", "vyse", "waylay", "yoru"
-];
+use crate::utils::{ALL_MAPS, ALL_AGENTS};
 
 /// Calculate available options based on current tournament state and action
 pub fn get_available_options(admin_state: &TournamentState) -> Vec<String> {
