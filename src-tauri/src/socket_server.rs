@@ -201,39 +201,38 @@ impl TournamentServer {
                 move |socket: SocketRef, Data::<PlayerJoinRequest>(data)| {
                     let pm_clone = Arc::clone(&player_manager);
                     let status_clone = Arc::clone(&status);
-                    tokio::task::block_in_place(|| {
-                        tokio::runtime::Handle::current().block_on(async {
-                            let mut pm = pm_clone.lock().await;
-                    
-                            match pm.add_player(&data.player_name, &socket.id.to_string()) {
-                                Ok(player_info) => {
-                                    // Update player count in status
-                                    {
-                                        let mut s = status_clone.lock().await;
-                                        s.player_count = pm.get_connected_count();
-                                    }
+                    let socket = socket.clone();
+                    tokio::spawn(async move {
+                        let mut pm = pm_clone.lock().await;
+                
+                        match pm.add_player(&data.player_name, &socket.id.to_string()) {
+                            Ok(player_info) => {
+                                // Update player count in status
+                                {
+                                    let mut s = status_clone.lock().await;
+                                    s.player_count = pm.get_connected_count();
+                                }
 
-                                    // Send assignment to player
-                                    let assignment = serde_json::json!({
-                                        "playerId": player_info.player_id
-                                    });
-                                    socket.emit("player-assigned", &assignment).ok();
-                                    
-                                    info!("Player {} assigned as {}", data.player_name, 
-                                          player_info.player_id.as_ref().unwrap());
-                                }
-                                Err(error) => {
-                                    warn!("Failed to add player {}: {}", data.player_name, error);
-                                    let error_response = serde_json::json!({
-                                        "message": error,
-                                        "code": "ASSIGNMENT_FAILED"
-                                    });
-                                    socket.emit("error", &error_response).ok();
-                                    socket.disconnect().ok();
-                                }
+                                // Send assignment to player
+                                let assignment = serde_json::json!({
+                                    "playerId": player_info.player_id
+                                });
+                                socket.emit("player-assigned", &assignment).ok();
+                                
+                                info!("Player {} assigned as {}", data.player_name, 
+                                      player_info.player_id.as_ref().unwrap());
                             }
-                        })
-                    })
+                            Err(error) => {
+                                warn!("Failed to add player {}: {}", data.player_name, error);
+                                let error_response = serde_json::json!({
+                                    "message": error,
+                                    "code": "ASSIGNMENT_FAILED"
+                                });
+                                socket.emit("error", &error_response).ok();
+                                socket.disconnect().ok();
+                            }
+                        }
+                    });
                 }
             });
 
