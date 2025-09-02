@@ -7,6 +7,7 @@ import type {
   TournamentAction,
   AssetSelection
 } from '../types/admin.types';
+import { serverService, TournamentState } from './serverService';
 import {
   calculateCurrentPlayer,
   getCurrentPhase,
@@ -59,8 +60,9 @@ const transformToOverlayFormat = (state: any) => {
   };
 };
 
-// Tauri event emission for overlay updates
+// Tauri event emission for overlay updates AND Socket.IO broadcasting
 const emitOverlayUpdate = async (state: any) => {
+  // Existing overlay update for OBS integration
   if (typeof window !== 'undefined' && (window as any).__TAURI__) {
     try {
       const overlayData = transformToOverlayFormat(state);
@@ -68,6 +70,55 @@ const emitOverlayUpdate = async (state: any) => {
     } catch (error) {
       console.error('Error emitting overlay update:', error);
     }
+  }
+
+  try {
+    // Transform admin state to Socket.IO format
+    const tournamentState: TournamentState = {
+      current_phase: state.currentPhase,
+      current_player: state.currentPlayer,
+      action_number: state.actionNumber,
+      first_player: state.firstPlayer,
+      event_started: state.eventStarted,
+      team_names: {
+        P1: state.teamNames?.P1 || 'Team 1',
+        P2: state.teamNames?.P2 || 'Team 2'
+      },
+      maps_banned: state.mapsBanned.map((ban: AssetSelection) => ({
+        name: ban.name,
+        player: ban.player
+      })),
+      maps_picked: state.mapsPicked.map((pick: AssetSelection) => ({
+        name: pick.name,
+        player: pick.player
+      })),
+      decider_map: state.deciderMap,
+      agents_banned: state.agentsBanned.map((ban: AssetSelection) => ({
+        name: ban.name,
+        player: ban.player
+      })),
+      agent_picks: {
+        P1: state.agentPicks.P1,
+        P2: state.agentPicks.P2
+      },
+      timer_state: state.timerState,
+      timer_seconds: state.timerSeconds,
+      pending_selection: state.pendingSelection,
+      revealed_actions: state.revealedActions,
+      action_history: state.actionHistory.map((action: TournamentAction) => ({
+        action_number: action.actionNumber,
+        player: action.player,
+        action_type: action.actionType,
+        selection: action.selection,
+        timestamp: action.timestamp
+      }))
+    };
+
+    // Broadcast to connected players via Socket.IO server
+    await serverService.broadcastTournamentState(tournamentState);
+  } catch (error) {
+    // No error throw yet, just warn for now
+    console.warn('Socket.IO broadcast failed (server may not be running):', error);
   }
 };
 
