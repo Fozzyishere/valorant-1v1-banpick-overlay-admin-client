@@ -311,19 +311,21 @@ pub struct TurnStartEvent {
     pub tournament_state: PlayerGameState,
 }
 
+// Game asset constants
+const ALL_MAPS: &[&str] = &[
+    "abyss", "ascent", "bind", "breeze", "corrode", "fracture",
+    "haven", "icebox", "lotus", "pearl", "split", "sunset"
+];
+
+const ALL_AGENTS: &[&str] = &[
+    "astra", "breach", "brimstone", "chamber", "clove", "cypher",
+    "deadlock", "fade", "gekko", "harbor", "iso", "jett", "kayo",
+    "killjoy", "neon", "omen", "phoenix", "raze", "reyna", "sage",
+    "skye", "sova", "tejo", "viper", "vyse", "waylay", "yoru"
+];
+
 /// Calculate available options based on current tournament state and action
 pub fn get_available_options(admin_state: &TournamentState) -> Vec<String> {
-    let all_maps = vec![
-        "abyss", "ascent", "bind", "breeze", "corrode", "fracture",
-        "haven", "icebox", "lotus", "pearl", "split", "sunset"
-    ];
-    
-    let all_agents = vec![
-        "astra", "breach", "brimstone", "chamber", "clove", "cypher",
-        "deadlock", "fade", "gekko", "harbor", "iso", "jett", "kayo",
-        "killjoy", "neon", "omen", "phoenix", "raze", "reyna", "sage",
-        "skye", "sova", "tejo", "viper", "vyse", "waylay", "yoru"
-    ];
 
     match admin_state.current_phase.as_str() {
         "MAP_PHASE" => {
@@ -341,7 +343,7 @@ pub fn get_available_options(admin_state: &TournamentState) -> Vec<String> {
                     .map(|pick| &pick.name)
                     .collect();
 
-                all_maps.into_iter()
+                ALL_MAPS.iter()
                     .filter(|map| !banned.iter().any(|b| b == map) && !picked.iter().any(|p| p == map))
                     .map(|map| map.to_string())
                     .collect()
@@ -357,7 +359,7 @@ pub fn get_available_options(admin_state: &TournamentState) -> Vec<String> {
                 .collect();
             let picked_refs: Vec<&String> = picked.iter().collect();
 
-            all_agents.into_iter()
+            ALL_AGENTS.iter()
                 .filter(|agent| !banned.iter().any(|b| b == agent) && !picked_refs.iter().any(|p| p == agent))
                 .map(|agent| agent.to_string())
                 .collect()

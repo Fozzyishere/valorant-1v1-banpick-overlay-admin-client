@@ -4,10 +4,11 @@ use socketioxide::{
     SocketIo,
 };
 use std::sync::Arc;
-use tokio::sync::Mutex;
-use tokio::net::TcpListener;
+use tokio::{net::TcpListener, sync::Mutex};
 use tracing::{error, info, warn};
 use uuid::Uuid;
+use axum::Router;
+use tower_http::cors::CorsLayer;
 
 use crate::player_manager::{PlayerManager, PlayerInfo};
 use crate::tournament_broadcast::TournamentState;
@@ -79,12 +80,12 @@ impl TournamentServer {
         let (layer, io) = SocketIo::new_layer();
         
         // Configure CORS for local development
-        let cors = tower_http::cors::CorsLayer::new()
+        let cors = CorsLayer::new()
             .allow_origin(tower_http::cors::Any)
             .allow_methods(tower_http::cors::Any)
             .allow_headers(tower_http::cors::Any);
 
-        let app = axum::Router::new()
+        let app = Router::new()
             .layer(cors)
             .layer(layer);
 
@@ -296,6 +297,3 @@ impl TournamentServer {
     }
 }
 
-// Add required axum and tower_http dependencies
-use axum;
-use tower_http;
