@@ -14,6 +14,8 @@ import {
   getActionType
 } from '../utils/tournamentHelpers';
 
+const TOURNAMENT_EVENT_DISPATCH_DELAY_MS = 100;
+
 // Transform store data to overlay format
 const transformToOverlayFormat = (state: any) => {
   // Convert arrays of AssetSelection to P1/P2 object format
@@ -314,7 +316,7 @@ export const useTournamentStore = create<TournamentStore>((set, get) => ({
       emitOverlayUpdate(newState);
       
       // Send tournament start notification to all connected players
-      setTimeout(async () => {
+  setTimeout(async () => {
         try {
           await serverService.sendTournamentStart({
             current_phase: newState.currentPhase,
@@ -346,7 +348,7 @@ export const useTournamentStore = create<TournamentStore>((set, get) => ({
         } catch (error) {
           console.warn('Failed to send tournament start notification:', error);
         }
-      }, 100);
+  }, TOURNAMENT_EVENT_DISPATCH_DELAY_MS);
       
       return newState;
     });
@@ -594,7 +596,7 @@ export const useTournamentStore = create<TournamentStore>((set, get) => ({
       
       // Send turn start event to current player
       if (state.currentPlayer) {
-        setTimeout(async () => {
+  setTimeout(async () => {
           try {
             await serverService.sendTurnStart({
               current_phase: state.currentPhase,
@@ -626,7 +628,7 @@ export const useTournamentStore = create<TournamentStore>((set, get) => ({
           } catch (error) {
             console.warn('Failed to send turn start notification:', error);
           }
-        }, 100);
+  }, TOURNAMENT_EVENT_DISPATCH_DELAY_MS);
       }
       
       // Start countdown from current seconds
