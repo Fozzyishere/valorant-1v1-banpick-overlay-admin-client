@@ -622,7 +622,7 @@ export const useTournamentStore = create<TournamentStore>((set, get) => ({
                 selection: action.selection,
                 timestamp: action.timestamp
               }))
-            }, state.currentPlayer!, state.timerSeconds);
+            }, state.timerSeconds);
           } catch (error) {
             console.warn('Failed to send turn start notification:', error);
           }

@@ -123,8 +123,20 @@ class ServerService {
     }
   }
 
-  async sendTurnStart(tournamentState: TournamentState, targetPlayer: string, timeLimit: number): Promise<void> {
+  /**
+   * Notify a specific player that their turn has started.
+   * The target player is derived from tournamentState.current_player to avoid
+   * passing redundant parameters at the call site.
+   *
+   * @param tournamentState Full current tournament state
+   * @param timeLimit Seconds allotted for the player's action
+   */
+  async sendTurnStart(tournamentState: TournamentState, timeLimit: number): Promise<void> {
     try {
+      const targetPlayer = tournamentState.current_player;
+      if (!targetPlayer) {
+        throw new Error('Cannot start turn: no current player set in tournament state');
+      }
       await invoke('send_turn_start', { 
         tournamentState, 
         targetPlayer, 

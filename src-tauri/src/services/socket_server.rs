@@ -5,13 +5,18 @@ use socketioxide::{
 };
 use std::sync::Arc;
 use tokio::{net::TcpListener, sync::Mutex};
-use tracing::{error, info, warn};
+use tracing::{error, info, warn, debug};
 use uuid::Uuid;
 use axum::Router;
 use tower_http::cors::CorsLayer;
 
 use crate::services::player_manager::{PlayerManager, PlayerInfo};
-use crate::services::tournament_service::TournamentState;
+use crate::services::tournament_service::{
+    TournamentState,
+    transform_for_players,
+    get_available_options,
+    create_turn_start_event,
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServerStatus {
@@ -200,7 +205,7 @@ impl TournamentServer {
     pub async fn broadcast_tournament_state(&self, state: TournamentState) -> Result<(), String> {
         if let Some(ref io) = self.io {
             // Transform admin state to player-compatible format
-            let player_state = crate::services::tournament_service::transform_for_players(&state);
+            let player_state = transform_for_players(&state);
             
             // Broadcast to all connected players
             io.emit("game-state-update", &player_state).ok();
@@ -217,10 +222,10 @@ impl TournamentServer {
             
             if let Some(socket_id) = player_manager.get_socket_for_player(target_player) {
                 // Calculate available options for this turn
-                let available_options = crate::services::tournament_service::get_available_options(tournament_state);
+                let available_options = get_available_options(tournament_state);
                 
                 // Create turn start event
-                let turn_event = crate::services::tournament_service::create_turn_start_event(
+                let turn_event = create_turn_start_event(
                     tournament_state,
                     target_player,
                     available_options,
@@ -251,7 +256,7 @@ impl TournamentServer {
 
     pub async fn send_tournament_start(&self, tournament_state: &TournamentState) -> Result<(), String> {
         if let Some(ref io) = self.io {
-            let player_state = crate::services::tournament_service::transform_for_players(tournament_state);
+            let player_state = transform_for_players(tournament_state);
             io.emit("tournament-start", &player_state).ok();
             info!("Sent tournament start event to all players");
             Ok(())
@@ -391,7 +396,7 @@ impl TournamentServer {
                 if socket.emit("pong", &()).is_err() {
                     warn!("Failed to send pong response to socket: {}", socket.id);
                 } else {
-                    info!("Heartbeat - ping/pong with socket: {}", socket.id);
+                    debug!("Heartbeat ping/pong with socket: {}", socket.id);
                 }
             });
 
