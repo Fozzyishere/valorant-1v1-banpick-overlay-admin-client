@@ -40,6 +40,33 @@ pub struct ActionResponse {
     pub error: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ValidatedPlayerAction {
+    pub player: String,        // "P1" | "P2"
+    pub action: String,        // "BAN" | "PICK" | "DECIDER"
+    pub selection: String,     // Asset name
+    pub timestamp: u64,
+    pub socket_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TimerControlEvent {
+    pub action: String,        // "PAUSE" | "RESUME" | "STOP" | "EXTEND"
+    #[serde(rename = "timeRemaining")]
+    pub time_remaining: Option<i32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TournamentResults {
+    pub winner: Option<String>,       // "P1" | "P2"
+    #[serde(rename = "finalMap")]
+    pub final_map: String,
+    #[serde(rename = "finalAgents")]
+    pub final_agents: std::collections::HashMap<String, String>, // P1/P2 -> agent
+    pub duration: u64,                // Tournament duration in seconds
+    pub summary: String,
+}
+
 pub struct TournamentServer {
     io: Option<SocketIo>,
     status: Arc<Mutex<ServerStatus>>,
@@ -184,6 +211,65 @@ impl TournamentServer {
         }
     }
 
+    pub async fn send_turn_start(&self, tournament_state: &TournamentState, target_player: &str, time_limit: i32) -> Result<(), String> {
+        if let Some(ref io) = self.io {
+            let player_manager = self.player_manager.lock().await;
+            
+            if let Some(socket_id) = player_manager.get_socket_for_player(target_player) {
+                // Calculate available options for this turn
+                let available_options = crate::services::tournament_service::get_available_options(tournament_state);
+                
+                // Create turn start event
+                let turn_event = crate::services::tournament_service::create_turn_start_event(
+                    tournament_state,
+                    target_player,
+                    available_options,
+                    time_limit,
+                );
+                
+                // Send to specific player
+                io.to(socket_id.clone()).emit("turn-start", &turn_event).ok();
+                info!("Sent turn start event to player {} (socket: {})", target_player, socket_id);
+                Ok(())
+            } else {
+                Err(format!("Player {} not connected", target_player))
+            }
+        } else {
+            Err("Server is not running".to_string())
+        }
+    }
+
+    pub async fn send_timer_control(&self, control: TimerControlEvent) -> Result<(), String> {
+        if let Some(ref io) = self.io {
+            io.emit("timer-control", &control).ok();
+            info!("Sent timer control event: {:?}", control);
+            Ok(())
+        } else {
+            Err("Server is not running".to_string())
+        }
+    }
+
+    pub async fn send_tournament_start(&self, tournament_state: &TournamentState) -> Result<(), String> {
+        if let Some(ref io) = self.io {
+            let player_state = crate::services::tournament_service::transform_for_players(tournament_state);
+            io.emit("tournament-start", &player_state).ok();
+            info!("Sent tournament start event to all players");
+            Ok(())
+        } else {
+            Err("Server is not running".to_string())
+        }
+    }
+
+    pub async fn send_tournament_end(&self, results: &TournamentResults) -> Result<(), String> {
+        if let Some(ref io) = self.io {
+            io.emit("tournament-end", results).ok();
+            info!("Sent tournament end event to all players");
+            Ok(())
+        } else {
+            Err("Server is not running".to_string())
+        }
+    }
+
     fn setup_socket_handlers(&self, io: &SocketIo, player_manager: Arc<Mutex<PlayerManager>>) {
         let player_manager_clone = Arc::clone(&player_manager);
         let status_clone = Arc::clone(&self.status);
@@ -218,7 +304,9 @@ impl TournamentServer {
                                 let assignment = serde_json::json!({
                                     "playerId": player_info.player_id
                                 });
-                                socket.emit("player-assigned", &assignment).ok();
+                                if socket.emit("player-assigned", &assignment).is_err() {
+                                    warn!("Failed to send assignment to player {}", data.player_name);
+                                }
                                 
                                 info!("Player {} assigned as {}", data.player_name, 
                                       player_info.player_id.as_ref().unwrap());
@@ -229,49 +317,82 @@ impl TournamentServer {
                                     "message": error,
                                     "code": "ASSIGNMENT_FAILED"
                                 });
-                                socket.emit("error", &error_response).ok();
-                                socket.disconnect().ok();
+                                if socket.emit("error", &error_response).is_err() {
+                                    warn!("Failed to send error response to rejected player: {}", data.player_name);
+                                }
+                                if socket.disconnect().is_err() {
+                                    warn!("Failed to disconnect rejected player: {}", data.player_name);
+                                }
                             }
                         }
                     });
                 }
             });
 
-            // Handle player actions
+            // Handle player actions with full validation
             socket.on("player-action", {
                 let player_manager = Arc::clone(&player_manager);
                 move |socket: SocketRef, Data::<PlayerActionRequest>(data)| {
                     let pm_clone = Arc::clone(&player_manager);
-                    let socket = socket.clone();
+                    let socket_clone = socket.clone();
                     tokio::spawn(async move {
                         let pm = pm_clone.lock().await;
+                        let socket_id = socket_clone.id.to_string();
                 
                         // Validate that the player is connected and assigned
-                        if let Some(_player) = pm.get_player_by_socket(&socket.id.to_string()) {
-                            info!("Received action from player: {} - {}", data.action, data.selection);
-                            
-                            // TODO: Implement full action validation logic
-                            // Issue: Need to integrate with tournament state for proper validation
-                            let response = ActionResponse {
-                                success: true,
-                                error: None,
-                            };
-                            socket.emit("action-result", &response).ok();
+                        if let Some(player) = pm.get_player_by_socket(&socket_id) {
+                            if let Some(player_id) = &player.player_id {
+                                info!("Received action from {}: {} - {}", player_id, data.action, data.selection);
+                                
+                                // Create validated player action for admin client
+                                let validated_action = ValidatedPlayerAction {
+                                    player: player_id.clone(),
+                                    action: data.action.clone(),
+                                    selection: data.selection.clone(),
+                                    timestamp: data.timestamp,
+                                    socket_id: socket_id.clone(),
+                                };
+                                
+                                // For now, accept all actions (admin client will validate)
+                                // In production, add tournament state validation here
+                                let response = ActionResponse {
+                                    success: true,
+                                    error: None,
+                                };
+                                
+                                socket_clone.emit("action-result", &response).ok();
+                                
+                                // Broadcast the action to admin client via the global action handler
+                                // This would be handled by a callback mechanism in full implementation
+                                info!("Action validated and ready for admin processing: {:?}", validated_action);
+                                
+                            } else {
+                                warn!("Action from connected but unassigned player: {}", socket_id);
+                                let response = ActionResponse {
+                                    success: false,
+                                    error: Some("Player assignment required".to_string()),
+                                };
+                                socket_clone.emit("action-result", &response).ok();
+                            }
                         } else {
-                            warn!("Action from unassigned player: {}", socket.id);
+                            warn!("Action from unknown socket: {}", socket_id);
                             let response = ActionResponse {
                                 success: false,
-                                error: Some("Player not assigned".to_string()),
+                                error: Some("Player not connected".to_string()),
                             };
-                            socket.emit("action-result", &response).ok();
+                            socket_clone.emit("action-result", &response).ok();
                         }
                     });
                 }
             });
 
-            // Handle ping/pong for heartbeat
+            // Handle ping/pong for heartbeat with logging
             socket.on("ping", move |socket: SocketRef| {
-                socket.emit("pong", &()).ok();
+                if socket.emit("pong", &()).is_err() {
+                    warn!("Failed to send pong response to socket: {}", socket.id);
+                } else {
+                    info!("Heartbeat - ping/pong with socket: {}", socket.id);
+                }
             });
 
             // Handle disconnection

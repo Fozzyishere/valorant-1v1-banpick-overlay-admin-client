@@ -50,6 +50,19 @@ export interface ServerError {
   code?: string;
 }
 
+export interface TimerControlEvent {
+  action: string;        // "PAUSE" | "RESUME" | "STOP" | "EXTEND"
+  timeRemaining?: number;
+}
+
+export interface TournamentResults {
+  winner?: string;       // "P1" | "P2"
+  finalMap: string;
+  finalAgents: Record<string, string>; // P1/P2 -> agent
+  duration: number;      // Tournament duration in seconds
+  summary: string;
+}
+
 class ServerService {
   private listeners: Map<string, Function[]> = new Map();
 
@@ -107,6 +120,42 @@ class ServerService {
       await invoke('broadcast_tournament_state', { tournamentState: state });
     } catch (error) {
       throw new Error(`Failed to broadcast tournament state: ${error}`);
+    }
+  }
+
+  async sendTurnStart(tournamentState: TournamentState, targetPlayer: string, timeLimit: number): Promise<void> {
+    try {
+      await invoke('send_turn_start', { 
+        tournamentState, 
+        targetPlayer, 
+        timeLimit 
+      });
+    } catch (error) {
+      throw new Error(`Failed to send turn start: ${error}`);
+    }
+  }
+
+  async sendTimerControl(control: TimerControlEvent): Promise<void> {
+    try {
+      await invoke('send_timer_control', { control });
+    } catch (error) {
+      throw new Error(`Failed to send timer control: ${error}`);
+    }
+  }
+
+  async sendTournamentStart(tournamentState: TournamentState): Promise<void> {
+    try {
+      await invoke('send_tournament_start', { tournamentState });
+    } catch (error) {
+      throw new Error(`Failed to send tournament start: ${error}`);
+    }
+  }
+
+  async sendTournamentEnd(results: TournamentResults): Promise<void> {
+    try {
+      await invoke('send_tournament_end', { results });
+    } catch (error) {
+      throw new Error(`Failed to send tournament end: ${error}`);
     }
   }
 

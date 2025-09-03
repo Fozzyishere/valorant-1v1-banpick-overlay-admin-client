@@ -79,7 +79,7 @@ const emitOverlayUpdate = async (state: any) => {
       current_player: state.currentPlayer,
       action_number: state.actionNumber,
       first_player: state.firstPlayer,
-      event_started: state.eventStarted,
+      event_started: state.eventStarted ?? null,
       team_names: {
         P1: state.teamNames?.P1 || 'Team 1',
         P2: state.teamNames?.P2 || 'Team 2'
@@ -312,6 +312,42 @@ export const useTournamentStore = create<TournamentStore>((set, get) => ({
       };
       
       emitOverlayUpdate(newState);
+      
+      // Send tournament start notification to all connected players
+      setTimeout(async () => {
+        try {
+          await serverService.sendTournamentStart({
+            current_phase: newState.currentPhase,
+            current_player: newState.currentPlayer,
+            action_number: newState.actionNumber,
+            first_player: newState.firstPlayer,
+            event_started: newState.eventStarted ?? null,
+            team_names: {
+              P1: newState.teamNames.P1,
+              P2: newState.teamNames.P2
+            },
+            maps_banned: (newState.mapsBanned as AssetSelection[]).map(ban => ({ name: ban.name, player: ban.player })),
+            maps_picked: (newState.mapsPicked as AssetSelection[]).map(pick => ({ name: pick.name, player: pick.player })),
+            decider_map: newState.deciderMap,
+            agents_banned: (newState.agentsBanned as AssetSelection[]).map(ban => ({ name: ban.name, player: ban.player })),
+            agent_picks: newState.agentPicks,
+            timer_state: newState.timerState,
+            timer_seconds: newState.timerSeconds,
+            pending_selection: newState.pendingSelection,
+            revealed_actions: Array.from(newState.revealedActions),
+            action_history: (newState.actionHistory as TournamentAction[]).map(action => ({
+              action_number: action.actionNumber,
+              player: action.player,
+              action_type: action.actionType,
+              selection: action.selection,
+              timestamp: action.timestamp
+            }))
+          });
+        } catch (error) {
+          console.warn('Failed to send tournament start notification:', error);
+        }
+      }, 100);
+      
       return newState;
     });
   },
@@ -554,6 +590,43 @@ export const useTournamentStore = create<TournamentStore>((set, get) => ({
       // Clear existing interval if any
       if (state.timerInterval) {
         clearInterval(state.timerInterval);
+      }
+      
+      // Send turn start event to current player
+      if (state.currentPlayer) {
+        setTimeout(async () => {
+          try {
+            await serverService.sendTurnStart({
+              current_phase: state.currentPhase,
+              current_player: state.currentPlayer,
+              action_number: state.actionNumber,
+              first_player: state.firstPlayer,
+              event_started: state.eventStarted ?? null,
+              team_names: {
+                P1: state.teamNames.P1,
+                P2: state.teamNames.P2
+              },
+              maps_banned: (state.mapsBanned as AssetSelection[]).map(ban => ({ name: ban.name, player: ban.player })),
+              maps_picked: (state.mapsPicked as AssetSelection[]).map(pick => ({ name: pick.name, player: pick.player })),
+              decider_map: state.deciderMap,
+              agents_banned: (state.agentsBanned as AssetSelection[]).map(ban => ({ name: ban.name, player: ban.player })),
+              agent_picks: state.agentPicks,
+              timer_state: 'running',
+              timer_seconds: state.timerSeconds,
+              pending_selection: state.pendingSelection,
+              revealed_actions: Array.from(clearedRevealed),
+              action_history: (state.actionHistory as TournamentAction[]).map(action => ({
+                action_number: action.actionNumber,
+                player: action.player,
+                action_type: action.actionType,
+                selection: action.selection,
+                timestamp: action.timestamp
+              }))
+            }, state.currentPlayer!, state.timerSeconds);
+          } catch (error) {
+            console.warn('Failed to send turn start notification:', error);
+          }
+        }, 100);
       }
       
       // Start countdown from current seconds
