@@ -28,7 +28,11 @@ pub fn run() {
             stop_tournament_server,
             get_server_status,
             get_connected_players,
-            broadcast_tournament_state
+            broadcast_tournament_state,
+            send_turn_start,
+            send_timer_control,
+            send_tournament_start,
+            send_tournament_end
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
