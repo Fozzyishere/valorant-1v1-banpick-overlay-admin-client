@@ -3,7 +3,9 @@
 pub mod socket_server;
 pub mod player_manager;
 pub mod tournament_service;
+pub mod tournament_validation;
 
 pub use socket_server::TournamentServer;
 pub use player_manager::PlayerInfo;
 pub use tournament_service::{TournamentState, transform_for_players, get_available_options};
+pub use tournament_validation::{TournamentValidator, ValidationError};

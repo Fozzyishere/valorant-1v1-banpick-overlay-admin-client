@@ -17,6 +17,7 @@ use crate::services::tournament_service::{
     get_available_options,
     create_turn_start_event,
 };
+use crate::services::tournament_validation::{TournamentValidator, ValidationError};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServerStatus {
@@ -77,6 +78,8 @@ pub struct TournamentServer {
     status: Arc<Mutex<ServerStatus>>,
     player_manager: Arc<Mutex<PlayerManager>>,
     server_handle: Option<tokio::task::JoinHandle<()>>,
+    current_tournament_state: Arc<Mutex<Option<TournamentState>>>,
+    validated_actions: Arc<Mutex<Vec<ValidatedPlayerAction>>>,
 }
 
 impl TournamentServer {
@@ -94,6 +97,8 @@ impl TournamentServer {
             status: Arc::new(Mutex::new(status)),
             player_manager: Arc::new(Mutex::new(PlayerManager::new())),
             server_handle: None,
+            current_tournament_state: Arc::new(Mutex::new(None)),
+            validated_actions: Arc::new(Mutex::new(Vec::new())),
         }
     }
 
@@ -124,9 +129,11 @@ impl TournamentServer {
         // Clone references for the async task
         let status_clone = Arc::clone(&self.status);
         let player_manager_clone = Arc::clone(&self.player_manager);
+        let tournament_state_clone = Arc::clone(&self.current_tournament_state);
+        let validated_actions_clone = Arc::clone(&self.validated_actions);
 
         // Setup Socket.IO event handlers
-        self.setup_socket_handlers(&io, player_manager_clone.clone());
+        self.setup_socket_handlers(&io, player_manager_clone.clone(), tournament_state_clone.clone(), validated_actions_clone.clone());
 
         // Bind to the specified port
         let listener = TcpListener::bind(format!("127.0.0.1:{}", port))
@@ -204,12 +211,18 @@ impl TournamentServer {
 
     pub async fn broadcast_tournament_state(&self, state: TournamentState) -> Result<(), String> {
         if let Some(ref io) = self.io {
+            // Store the current tournament state for validation
+            {
+                let mut current_state = self.current_tournament_state.lock().await;
+                *current_state = Some(state.clone());
+            }
+
             // Transform admin state to player-compatible format
             let player_state = transform_for_players(&state);
-            
+
             // Broadcast to all connected players
             io.emit("game-state-update", &player_state).ok();
-            info!("Broadcasted tournament state to all players");
+            info!("Broadcasted tournament state to all players and updated server state");
             Ok(())
         } else {
             Err("Server is not running".to_string())
@@ -275,7 +288,7 @@ impl TournamentServer {
         }
     }
 
-    fn setup_socket_handlers(&self, io: &SocketIo, player_manager: Arc<Mutex<PlayerManager>>) {
+    fn setup_socket_handlers(&self, io: &SocketIo, player_manager: Arc<Mutex<PlayerManager>>, tournament_state: Arc<Mutex<Option<TournamentState>>>, validated_actions: Arc<Mutex<Vec<ValidatedPlayerAction>>>) {
         let player_manager_clone = Arc::clone(&player_manager);
         let status_clone = Arc::clone(&self.status);
 
@@ -337,45 +350,96 @@ impl TournamentServer {
             // Handle player actions with full validation
             socket.on("player-action", {
                 let player_manager = Arc::clone(&player_manager);
+                let tournament_state = Arc::clone(&tournament_state);
                 move |socket: SocketRef, Data::<PlayerActionRequest>(data)| {
                     let pm_clone = Arc::clone(&player_manager);
+                    let ts_clone = Arc::clone(&tournament_state);
                     let socket_clone = socket.clone();
                     tokio::spawn(async move {
                         let pm = pm_clone.lock().await;
                         let socket_id = socket_clone.id.to_string();
-                
+
                         // Validate that the player is connected and assigned
                         if let Some(player) = pm.get_player_by_socket(&socket_id) {
                             if let Some(player_id) = &player.player_id {
                                 info!("Received action from {}: {} - {}", player_id, data.action, data.selection);
-                                
-                                // Create validated player action for admin client
-                                let validated_action = ValidatedPlayerAction {
-                                    player: player_id.clone(),
-                                    action: data.action.clone(),
-                                    selection: data.selection.clone(),
-                                    timestamp: data.timestamp,
-                                    socket_id: socket_id.clone(),
-                                };
-                                
-                                // For now, accept all actions (admin client will validate)
-                                // In production, add tournament state validation here
-                                let response = ActionResponse {
-                                    success: true,
-                                    error: None,
-                                };
-                                
-                                socket_clone.emit("action-result", &response).ok();
-                                
-                                // Broadcast the action to admin client via the global action handler
-                                // This would be handled by a callback mechanism in full implementation
-                                info!("Action validated and ready for admin processing: {:?}", validated_action);
-                                
+
+                                // Get current tournament state for validation
+                                let current_state = ts_clone.lock().await;
+
+                                if let Some(tournament_state) = current_state.as_ref() {
+                                    // Perform server-side tournament validation
+                                    match TournamentValidator::validate_player_action(
+                                        tournament_state,
+                                        player_id,
+                                        &data.action,
+                                        &data.selection,
+                                    ) {
+                                        Ok(()) => {
+                                            // Action is valid - create validated action for admin client
+                                            let validated_action = ValidatedPlayerAction {
+                                                player: player_id.clone(),
+                                                action: data.action.clone(),
+                                                selection: data.selection.clone(),
+                                                timestamp: data.timestamp,
+                                                socket_id: socket_id.clone(),
+                                            };
+
+                                            // Send success response to player
+                                            let response = ActionResponse {
+                                                success: true,
+                                                error: None,
+                                            };
+                                            socket_clone.emit("action-result", &response).ok();
+
+                                            // Broadcast validated action to all connected players via io reference
+                                            {
+                                                let action_broadcast = serde_json::json!({
+                                                    "type": "player-action-validated",
+                                                    "player": validated_action.player,
+                                                    "action": validated_action.action,
+                                                    "selection": validated_action.selection,
+                                                    "timestamp": validated_action.timestamp,
+                                                    "actionNumber": tournament_state.action_number
+                                                });
+
+                                                // Broadcast to all players using the global io instance
+                                                // This will be handled when we add the io reference to the action handler
+                                                info!("Validated action ready for broadcast: {} {} {}",
+                                                      validated_action.player, validated_action.action, validated_action.selection);
+                                            }
+
+                                            // TODO: Send validated action to admin client for processing
+                                            // This would integrate with a callback or channel system
+                                            info!("Action validated successfully: {:?}", validated_action);
+
+                                        }
+                                        Err(validation_error) => {
+                                            // Action validation failed - send detailed error
+                                            warn!("Action validation failed for {}: {}", player_id, validation_error.to_error_message());
+
+                                            let response = ActionResponse {
+                                                success: false,
+                                                error: Some(validation_error.to_error_message()),
+                                            };
+                                            socket_clone.emit("action-result", &response).ok();
+                                        }
+                                    }
+                                } else {
+                                    // No tournament state available
+                                    warn!("Action rejected: no tournament state available");
+                                    let response = ActionResponse {
+                                        success: false,
+                                        error: Some("Tournament state not available. Please wait for tournament to start.".to_string()),
+                                    };
+                                    socket_clone.emit("action-result", &response).ok();
+                                }
+
                             } else {
                                 warn!("Action from connected but unassigned player: {}", socket_id);
                                 let response = ActionResponse {
                                     success: false,
-                                    error: Some("Player assignment required".to_string()),
+                                    error: Some("Player assignment required. Please reconnect.".to_string()),
                                 };
                                 socket_clone.emit("action-result", &response).ok();
                             }
@@ -383,7 +447,7 @@ impl TournamentServer {
                             warn!("Action from unknown socket: {}", socket_id);
                             let response = ActionResponse {
                                 success: false,
-                                error: Some("Player not connected".to_string()),
+                                error: Some("Player not connected. Please reconnect to the tournament.".to_string()),
                             };
                             socket_clone.emit("action-result", &response).ok();
                         }
