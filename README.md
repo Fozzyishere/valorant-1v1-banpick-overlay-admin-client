@@ -1,8 +1,12 @@
+# THIS REPO HAS BEEN (KINDA) ABANDONED
+
+This project was initially created to help a friend run his own local tournament smoothly, but due to the tournament cancelation and my own lack of time to continue development, I have decided to archive this repository. I'll probably continue working on it when I have some more free time. The admin client right now will only works locally without player client communication through Socket.io.
+
 # Valorant 1v1 Tournament Management System
 
-A basic OBS overlay management for during the ban-pick phase of a friend's local Valorant tournament. Initially made for my friend, this now ended up something of a hobby project for me to mess around with stuff I want to do.
+A Tauri-based desktop application for managing the ban-pick phase of Valorant 1v1 tournaments with real-time OBS overlay integration. Built as a personal hobby project to explore desktop app development with modern web technologies.
 
-Right now, a barebone front end panel with an overlay, but will probably be expanded into a set of admin/player clients communicating with Socket.io and ngrok or Cloudflare for network exposure without any hassle.
+The application features a comprehensive admin dashboard that controls a separate overlay window for OBS streaming, handling both map and agent selection phases with turn-based logic and timer management.
 
 ## Tech Stack
 
@@ -15,83 +19,137 @@ Right now, a barebone front end panel with an overlay, but will probably be expa
 ## Getting Started
 
 ### What You Need
-- Node.js 18+ 
+
+- Node.js 18+
 - Rust (for Tauri - the desktop framework)
-- OBS Studio (if you want to test the overlay)
+- OBS Studio (for capturing the overlay window)
 
 ### Quick Setup
-```bash
-# Get the code
-git clone <repository-url>
-cd valorant-1v1-banpick-overlay
 
-# Install everything
+```bash
+# Clone the repository
+git clone <repository-url>
+cd valorant-1v1-banpick-overlay-admin-client
+
+# Install dependencies
 npm install
 
-# Start developing
+# Start development server
 npm run dev
 
 # Build for production
 npm run build
 
-# Run the desktop app
+# Run the Tauri desktop app
 npm run tauri dev
+
+# Build the desktop application
+npm run tauri build
 ```
 
 ### Useful Commands
+
 ```bash
-npm run dev          # Start the dev server
-npm run build        # Build for production
-npm run preview      # See the production build
-npm run tauri dev    # Run the desktop app
-npm run tauri build  # Build the desktop app
+npm run dev          # Start Vite dev server
+npm run build        # Build production bundle
+npm run preview      # Preview production build
+npm run tauri dev    # Run desktop app in development
+npm run tauri build  # Build desktop application
 ```
+
+## Features
+
+### Admin Dashboard
+
+- **Four-panel layout**: Timer control, turn management, information display, and live preview
+- **Player setup**: Configure player names and starting player
+- **Phase management**: Handles MAP_PHASE → AGENT_PHASE → CONCLUSION flow
+- **Turn tracking**: Automatic turn progression with visual indicators
+- **Timer system**: Independent countdown timer with start/pause/reset controls
+- **Asset selection**: Click-to-select interface for maps and agents
+- **Live preview**: Real-time preview of what appears on the overlay
+
+### OBS Overlay Window
+
+- **Separate window**: Programmatically managed overlay window (1920x1080)
+- **Real-time updates**: Instant synchronization with admin dashboard via Tauri events
+- **Asset animations**: Reveal animations for bans, picks, and selections
+- **Phase transitions**: Smooth transitions between map and agent phases
+- **Tournament state**: Displays team names, banned/picked assets, and current phase
 
 ## How to Use It
 
 ### Setting Up a Tournament
-1. **Add players**: Put in player names and decide who goes first
-2. **Start the event**: Hit the START EVENT button to begin
-3. **Run the tournament**: Use the timer and selection panels to move through turns
-4. **Watch progress**: Keep an eye on the preview panel to see what's happening
+
+1. **Configure players**: Enter player names for P1 and P2
+2. **Select first player**: Choose which player starts the tournament
+3. **Start event**: Click the START EVENT button to begin
+4. **Open overlay**: Use the "Show Overlay" button to launch the OBS overlay window
+5. **Add to OBS**: Capture the overlay window in OBS Studio using Window Capture
 
 ### Tournament Flow
-1. **Map phase**: Players ban and pick maps
-3. **Agent phase**: Players ban and pick agents
-4. **Conclusion**: See the final results
+
+1. **Map Phase**:
+   - 6 map bans (3 per player, alternating)
+   - 2 map picks (1 per player)
+   - 1 decider map selection
+2. **Agent Phase**:
+   - 6 agent bans (3 per player, alternating)
+   - 2 agent picks (1 per player)
+3. **Conclusion**: View final results
+
+### Timer Controls
+
+- Use the timer to limit player decision time
+- Timer is independent and can be started/paused/reset at any time
+- Timer doesn't automatically advance turns - it's a visual aid only
 
 ## Project Structure
 
 ```
-valorant-1v1-banpick-overlay/
+valorant-1v1-banpick-overlay-admin-client/
 ├── src/
-│   ├── components/          # The main UI pieces
-│   │   ├── AdminDashboard.tsx
-│   │   ├── TimerPanel.tsx
-│   │   ├── TurnControlPanel.tsx
-│   │   ├── InformationPanel.tsx
-│   │   └── PreviewPanel.tsx
-│   ├── services/            # How data is managed
-│   │   └── adminStore.ts
-│   ├── types/               # TypeScript definitions
-│   │   └── admin.types.ts
+│   ├── components/          # React UI components
+│   │   ├── AdminDashboard.tsx    # Main dashboard layout
+│   │   ├── HeaderBar.tsx         # Top bar with overlay controls
+│   │   ├── TimerPanel.tsx        # Timer control panel
+│   │   ├── TurnControlPanel.tsx  # Turn and phase management
+│   │   ├── InformationPanel.tsx  # Current state information
+│   │   └── PreviewPanel.tsx      # Live overlay preview
+│   ├── services/            # State and window management
+│   │   ├── adminStore.ts         # Zustand tournament state store
+│   │   └── windowManager.ts      # Tauri window management
+│   ├── types/               # TypeScript type definitions
+│   │   └── admin.types.ts        # Tournament state types
 │   └── utils/               # Helper functions
-│       └── tournamentHelpers.ts
-├── public/                  # Static files
-│   ├── overlay.html         # The OBS overlay
+│       ├── tournamentHelpers.ts  # Turn/phase logic
+│       └── overlayPositioning.ts # Overlay asset coordinates
+├── public/                  # Static overlay files
+│   ├── overlay.html         # OBS overlay page
 │   ├── css/overlay.css      # Overlay styling
-│   ├── js/overlay.js        # Overlay logic
-│   └── img/                 # Game images
-└── src-tauri/              # Desktop app config
+│   ├── js/overlay.js        # Overlay logic and animations
+│   └── img/                 # Game assets (maps, agents)
+└── src-tauri/              # Tauri desktop configuration
+    ├── src/                # Rust source code
+    └── tauri.conf.json     # Tauri app configuration
 ```
 
 ## Contributing
 
-Want to help out? Awesome!
-1. Fork the repo
-2. Make your changes
-3. Test everything works
-4. Send a pull request
+Want to help out? Contributions are welcome!
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## Future Plans
+
+- Socket.io integration for networked tournaments
+- Player client applications
+- Remote tournament management via ngrok/Cloudflare tunnels
+- Additional game modes and tournament formats
 
 ## License
 
