@@ -12,9 +12,12 @@ The application features a comprehensive admin dashboard that controls a separat
 
 - **Frontend**: React 18 + TypeScript + Tailwind CSS
 - **Desktop**: Tauri 2.0 (turns web app into desktop app with fewer headaches and bloats than Electron)
-- **State**: Zustand (simple state management)
+- **State**: Zustand with selector subscriptions (single-responsibility stores)
+- **Timer Backend**: Rust-native timer with Tokio async runtime
 - **Build**: Vite
-- **Styling**: Tailwind CSS with Tokyo Night theme (subject to change in the future)
+- **Testing**: Vitest + Testing Library
+- **Code Quality**: ESLint + Prettier
+- **Styling**: Tailwind CSS with Tokyo Night theme
 
 ## Getting Started
 
@@ -34,27 +37,35 @@ cd valorant-1v1-banpick-overlay-admin-client
 # Install dependencies
 npm install
 
-# Start development server
-npm run dev
-
-# Build for production
-npm run build
-
-# Run the Tauri desktop app
+# Run the Tauri desktop app (development)
 npm run tauri dev
 
 # Build the desktop application
 npm run tauri build
 ```
 
-### Useful Commands
+### Available Commands
 
 ```bash
-npm run dev          # Start Vite dev server
+# Development
+npm run dev          # Start Vite dev server (frontend only)
+npm run tauri dev    # Run full desktop app in development
+
+# Build
 npm run build        # Build production bundle
-npm run preview      # Preview production build
-npm run tauri dev    # Run desktop app in development
 npm run tauri build  # Build desktop application
+npm run preview      # Preview production build
+
+# Testing
+npm run test         # Run tests in watch mode
+npm run test:run     # Run tests once
+npm run test:coverage # Run tests with coverage report
+
+# Code Quality
+npm run lint         # Run ESLint
+npm run lint:fix     # Run ESLint with auto-fix
+npm run format       # Format code with Prettier
+npm run format:check # Check code formatting
 ```
 
 ## Features
@@ -65,9 +76,10 @@ npm run tauri build  # Build desktop application
 - **Player setup**: Configure player names and starting player
 - **Phase management**: Handles MAP_PHASE → AGENT_PHASE → CONCLUSION flow
 - **Turn tracking**: Automatic turn progression with visual indicators
-- **Timer system**: Independent countdown timer with start/pause/reset controls
+- **Timer system**: Rust-native countdown timer with start/pause/reset controls
 - **Asset selection**: Click-to-select interface for maps and agents
 - **Live preview**: Real-time preview of what appears on the overlay
+- **Undo support**: Ability to undo the last action
 
 ### OBS Overlay Window
 
@@ -76,6 +88,7 @@ npm run tauri build  # Build desktop application
 - **Asset animations**: Reveal animations for bans, picks, and selections
 - **Phase transitions**: Smooth transitions between map and agent phases
 - **Tournament state**: Displays team names, banned/picked assets, and current phase
+- **TypeScript-based**: Modular overlay rendering system with dedicated renderers
 
 ## How to Use It
 
@@ -104,9 +117,55 @@ npm run tauri build  # Build desktop application
 - Timer is independent and can be started/paused/reset at any time
 - Timer doesn't automatically advance turns - it's a visual aid only
 
+## Architecture
+
+This project follows a clean architecture with separation of concerns:
+
+### Core Layer (`src/core/`)
+
+Pure business logic with no framework dependencies:
+
+- **TournamentEngine**: Pure state machine for tournament logic (immutable state transitions)
+- **TimerEngine**: Timer utility functions and state transformations
+- **Selectors**: Derived state calculations (turn info, available assets, phase progress)
+- **Constants**: Tournament configuration (17-action sequence, phase boundaries)
+
+### Store Layer (`src/store/`)
+
+Zustand stores with single responsibilities:
+
+- **tournamentStore**: Tournament state management, delegates logic to TournamentEngine
+- **timerStore**: Rust backend integration via Tauri commands
+- **uiStore**: UI-specific state (modals, loading states)
+
+### Services Layer (`src/services/`)
+
+External integrations:
+
+- **overlayBridge**: Transforms state and emits Tauri events to overlay window
+- **windowManager**: Tauri window lifecycle management
+- **adminStore**: Legacy facade (being phased out)
+
+### Overlay System (`src/overlay/`)
+
+Modular TypeScript overlay with dedicated renderers:
+
+- **rendering/**: AssetRenderer, BackgroundManager, TeamNameRenderer, TimerRenderer
+- **animation/**: RevealAnimator, TransitionController
+- **state/**: OverlayState management
+- **events/**: TauriEventListener for real-time updates
+
+### Rust Backend (`src-tauri/src/timer/`)
+
+Native timer implementation:
+
+- **state.rs**: Timer state with Tokio watch channels
+- **service.rs**: Async timer loop with 1-second ticks
+- **commands.rs**: Tauri command handlers (start, pause, reset)
+
 ## Project Structure
 
-```
+```text
 valorant-1v1-banpick-overlay-admin-client/
 ├── src/
 │   ├── components/          # React UI components
@@ -116,22 +175,42 @@ valorant-1v1-banpick-overlay-admin-client/
 │   │   ├── TurnControlPanel.tsx  # Turn and phase management
 │   │   ├── InformationPanel.tsx  # Current state information
 │   │   └── PreviewPanel.tsx      # Live overlay preview
-│   ├── services/            # State and window management
-│   │   ├── adminStore.ts         # Zustand tournament state store
+│   ├── core/                # Pure business logic (framework-agnostic)
+│   │   ├── tournament/           # Tournament state machine
+│   │   │   ├── TournamentEngine.ts   # Pure state transitions
+│   │   │   ├── selectors.ts          # Derived state calculations
+│   │   │   ├── constants.ts          # Action sequence config
+│   │   │   └── types.ts              # TypeScript interfaces
+│   │   └── timer/                # Timer utilities
+│   │       ├── TimerEngine.ts        # Timer state helpers
+│   │       └── types.ts              # Timer types
+│   ├── store/               # Zustand state management
+│   │   ├── tournamentStore.ts    # Tournament state + actions
+│   │   ├── timerStore.ts         # Rust timer integration
+│   │   └── uiStore.ts            # UI state
+│   ├── hooks/               # React hooks
+│   │   ├── useTournament.ts      # Tournament selectors hook
+│   │   └── useTimer.ts           # Timer state hook
+│   ├── services/            # External integrations
+│   │   ├── overlayBridge.ts      # Overlay event emission
 │   │   └── windowManager.ts      # Tauri window management
-│   ├── types/               # TypeScript type definitions
-│   │   └── admin.types.ts        # Tournament state types
-│   └── utils/               # Helper functions
-│       ├── tournamentHelpers.ts  # Turn/phase logic
-│       └── overlayPositioning.ts # Overlay asset coordinates
-├── public/                  # Static overlay files
-│   ├── overlay.html         # OBS overlay page
-│   ├── css/overlay.css      # Overlay styling
-│   ├── js/overlay.js        # Overlay logic and animations
-│   └── img/                 # Game assets (maps, agents)
-└── src-tauri/              # Tauri desktop configuration
-    ├── src/                # Rust source code
-    └── tauri.conf.json     # Tauri app configuration
+│   ├── overlay/             # TypeScript overlay system
+│   │   ├── main.ts               # Overlay entry point
+│   │   ├── rendering/            # Asset/timer/team renderers
+│   │   ├── animation/            # Reveal and transition controllers
+│   │   ├── state/                # Overlay state management
+│   │   └── events/               # Tauri event listener
+│   └── types/               # Shared TypeScript definitions
+├── public/                  # Static overlay assets
+│   └── img/                      # Game assets (maps, agents)
+└── src-tauri/              # Rust desktop backend
+    └── src/
+        ├── lib.rs                # Tauri app setup
+        ├── main.rs               # Entry point
+        └── timer/                # Native timer module
+            ├── state.rs          # Timer state + channels
+            ├── service.rs        # Async timer loop
+            └── commands.rs       # Tauri commands
 ```
 
 ## Contributing
@@ -141,8 +220,9 @@ Want to help out? Contributions are welcome!
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+4. Run tests (`npm run test:run`)
+5. Ensure code quality (`npm run lint && npm run format:check`)
+6. Submit a pull request
 
 ## Future Plans
 
@@ -150,6 +230,7 @@ Want to help out? Contributions are welcome!
 - Player client applications
 - Remote tournament management via ngrok/Cloudflare tunnels
 - Additional game modes and tournament formats
+- Enhanced overlay animations and themes
 
 ## License
 
