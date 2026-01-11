@@ -1,0 +1,52 @@
+/* Timer display styles as CSS module */
+
+.timerDisplay {
+  position: absolute;
+  font-family: 'Valorant', 'Tungsten', sans-serif;
+  font-weight: bold;
+  text-align: center;
+  z-index: 100;
+}
+
+.ready {
+  color: #ffffff;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+.running {
+  color: #00ff88;
+  text-shadow: 0 0 15px rgba(0, 255, 136, 0.7);
+  animation: timerPulse 1s ease-in-out infinite;
+}
+
+.paused {
+  color: #ffaa00;
+  text-shadow: 0 0 10px rgba(255, 170, 0, 0.5);
+}
+
+.finished {
+  color: #ff4444;
+  text-shadow: 0 0 20px rgba(255, 68, 68, 0.8);
+  animation: timerFinished 0.5s ease-out;
+}
+
+@keyframes timerPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+@keyframes timerFinished {
+  0% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Valorant Tournament Overlay</title>
+    <!-- Keep original CSS for now -->
+    <link rel="stylesheet" href="/css/overlay.css" />
+  </head>
+  <body>
+    <div class="background-container">
+      <img
+        id="phase-1-bg"
+        class="background-image visible"
+        src="/img/phase-1-map.png"
+        alt="Map Phase Background"
+      />
+      <img
+        id="phase-2-bg"
+        class="background-image hidden"
+        src="/img/phase-2-agent.png"
+        alt="Agent Phase Background"
+      />
+      <img
+        id="conclusion-bg"
+        class="background-image hidden"
+        src="/img/conclusion.png"
+        alt="Conclusion Background"
+      />
+    </div>
+
+    <div class="overlay-content">
+      <div class="team-name player1" id="team1-name">Player 1</div>
+      <div class="team-name player2" id="team2-name">Player 2</div>
+      <div class="timer-display ready" id="timer-display">30</div>
+    </div>
+
+    <div class="asset-container" id="asset-container">
+      <!-- Tournament assets will be positioned here dynamically -->
+    </div>
+    <div class="map-overlay-container" id="map-overlay-container"></div>
+    <div class="agent-overlay-container" id="agent-overlay-container"></div>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

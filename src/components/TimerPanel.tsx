@@ -2,11 +2,11 @@ import { useTournamentStore } from '../services/adminStore';
 import { getTurnInfo } from '../utils/tournamentHelpers';
 
 export function TimerPanel() {
-  const { 
-    timerState, 
-    timerSeconds, 
-    startTimer, 
-    pauseTimer, 
+  const {
+    timerState,
+    timerSeconds,
+    startTimer,
+    pauseTimer,
     resetTimer,
     actionNumber,
     firstPlayer,
@@ -15,7 +15,6 @@ export function TimerPanel() {
     lastError,
     phaseAdvancePending,
     advancePhase,
-    currentPhase
   } = useTournamentStore();
 
   const formatTime = (seconds: number): string => {
@@ -26,16 +25,20 @@ export function TimerPanel() {
 
   const getTimerColor = () => {
     switch (timerState) {
-      case 'ready': return 'text-tokyo-teal';
-      case 'running': return 'text-tokyo-orange';
-      case 'paused': return 'text-tokyo-yellow';
-      case 'finished': return 'text-tokyo-red';
-      default: return 'text-tokyo-text-dim';
+      case 'ready':
+        return 'text-tokyo-teal';
+      case 'running':
+        return 'text-tokyo-orange';
+      case 'paused':
+        return 'text-tokyo-yellow';
+      case 'finished':
+        return 'text-tokyo-red';
+      default:
+        return 'text-tokyo-text-dim';
     }
   };
 
   const turnInfo = getTurnInfo(actionNumber, firstPlayer);
-
 
   return (
     <div className="flex flex-col h-full items-stretch space-y-3">
@@ -48,20 +51,21 @@ export function TimerPanel() {
           {eventStarted ? turnInfo.description : 'Not started'}
         </div>
       </div>
-      
+
       {/* Timer Display */}
-      <div 
+      <div
         className={`text-4xl font-mono font-bold text-center tabular-nums pt-4 px-4 py-3 bg-tokyo-background-dark/50 rounded-lg border border-tokyo-border/30 ${getTimerColor()}`}
-        style={{fontFamily: 'JetBrains Mono, ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace'}}
+        style={{
+          fontFamily:
+            'JetBrains Mono, ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+        }}
       >
         {formatTime(timerSeconds)}
       </div>
-      
+
       {/* Timer Status */}
-      <div className="text-sm text-tokyo-text-dim capitalize text-center">
-        {timerState}
-      </div>
-      
+      <div className="text-sm text-tokyo-text-dim capitalize text-center">{timerState}</div>
+
       {/* Timer Controls */}
       <div className="flex flex-col space-y-2 w-full">
         <button
@@ -71,7 +75,7 @@ export function TimerPanel() {
         >
           START
         </button>
-        
+
         <button
           onClick={timerState === 'paused' ? startTimer : pauseTimer}
           disabled={timerState === 'ready' || timerState === 'finished'}
@@ -79,7 +83,7 @@ export function TimerPanel() {
         >
           {timerState === 'paused' ? 'RESUME' : 'PAUSE'}
         </button>
-        
+
         <button
           onClick={resetTimer}
           className="px-4 py-2 bg-tokyo-red hover:bg-tokyo-pink text-white rounded font-medium transition-colors"
@@ -98,7 +102,6 @@ export function TimerPanel() {
           {eventStarted ? 'EVENT STARTED' : 'START EVENT'}
         </button>
       </div>
-
 
       {/* Manual Phase Advance */}
       {phaseAdvancePending && (
@@ -122,8 +125,11 @@ export function TimerPanel() {
       {lastError && (
         <div className="mt-2 bg-tokyo-red/10 border border-tokyo-red/30 rounded-lg p-3">
           <div className="flex items-start space-x-2">
-            <svg className="w-4 h-4 fill-current text-tokyo-red mt-0.5 flex-shrink-0" viewBox="0 0 20 20">
-              <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"/>
+            <svg
+              className="w-4 h-4 fill-current text-tokyo-red mt-0.5 flex-shrink-0"
+              viewBox="0 0 20 20"
+            >
+              <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" />
             </svg>
             <div className="text-xs text-tokyo-red">
               <div className="font-medium mb-1">Action Error</div>

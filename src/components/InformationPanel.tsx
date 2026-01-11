@@ -1,5 +1,11 @@
 import { useTournamentStore } from '../services/adminStore';
-import { getAvailableAssets, isMapPhase, isAgentPhase, ALL_MAPS, ALL_AGENTS } from '../utils/tournamentHelpers';
+import {
+  getAvailableAssets,
+  isMapPhase,
+  isAgentPhase,
+  ALL_MAPS,
+  ALL_AGENTS,
+} from '../utils/tournamentHelpers';
 import type { AssetSelectionState } from '../types/admin.types';
 import { useState, useCallback } from 'react';
 
@@ -16,7 +22,6 @@ export function InformationPanel() {
     timerState,
     attemptSelection,
     setError,
-    
   } = useTournamentStore();
 
   const [confirmAsset, setConfirmAsset] = useState<string | null>(null);
@@ -69,7 +74,8 @@ export function InformationPanel() {
     if (type === 'map') {
       if (availability.maps.banned.includes(assetName as any)) return 'banned';
       if (availability.maps.picked.includes(assetName as any)) return 'picked';
-      if (actionNumber === 9 && !availability.maps.picked.includes(assetName as any)) return 'disabled';
+      if (actionNumber === 9 && !availability.maps.picked.includes(assetName as any))
+        return 'disabled';
       return 'available';
     } else {
       if (availability.agents.banned.includes(assetName as any)) return 'banned';
@@ -79,14 +85,15 @@ export function InformationPanel() {
   };
 
   const getAssetClasses = (type: 'map' | 'agent', state: string, isActive: boolean) => {
-    const baseClasses = type === 'agent'
-      ? "px-1.5 py-1 border rounded text-center text-[11px] font-medium transition-all cursor-pointer"
-      : "p-2 border rounded text-center text-sm font-medium transition-all cursor-pointer";
-    
+    const baseClasses =
+      type === 'agent'
+        ? 'px-1.5 py-1 border rounded text-center text-[11px] font-medium transition-all cursor-pointer'
+        : 'p-2 border rounded text-center text-sm font-medium transition-all cursor-pointer';
+
     if (!isActive) {
       return `${baseClasses} bg-tokyo-surface-light border-tokyo-border-light text-tokyo-text-dim cursor-not-allowed`;
     }
-    
+
     switch (state) {
       case 'banned':
         return `${baseClasses} bg-tokyo-red/20 border-tokyo-red text-tokyo-red line-through cursor-not-allowed`;
@@ -107,18 +114,24 @@ export function InformationPanel() {
   return (
     <div className="flex flex-col gap-3 h-full relative">
       <h2 className="text-lg font-semibold text-tokyo-text tracking-tight">Asset Selection</h2>
-      
+
       {/* Map Selection - size to content so Agents can take remaining space */}
       <div className="flex flex-col">
-        <h3 className={`text-md font-medium ${isMapActive ? 'text-tokyo-blue' : 'text-tokyo-text-dim'}`}>Maps {isMapActive ? '(Active)' : ''}</h3>
+        <h3
+          className={`text-md font-medium ${isMapActive ? 'text-tokyo-blue' : 'text-tokyo-text-dim'}`}
+        >
+          Maps {isMapActive ? '(Active)' : ''}
+        </h3>
         <div className="mt-2 grid grid-cols-3 gap-2">
           {ALL_MAPS.map((mapName) => {
             let state = getAssetState(mapName, 'map') as AssetSelectionState;
-            const canClick = isMapActive && (state === 'available' || (actionNumber === 9 && state === 'picked'));
+            const canClick =
+              isMapActive && (state === 'available' || (actionNumber === 9 && state === 'picked'));
 
             // Visual state overrides for pending/revealed of current action
             if (pendingSelection === mapName) state = 'selected-pending' as AssetSelectionState;
-            if (revealedActions.has(actionNumber) && (state === 'available' || state === 'picked')) state = 'revealed' as AssetSelectionState;
+            if (revealedActions.has(actionNumber) && (state === 'available' || state === 'picked'))
+              state = 'revealed' as AssetSelectionState;
 
             return (
               <div
@@ -135,14 +148,19 @@ export function InformationPanel() {
 
       {/* Agent Selection - occupy remaining panel height */}
       <div className="flex flex-col flex-1 min-h-[220px]">
-        <h3 className={`text-md font-medium ${isAgentActive ? 'text-tokyo-blue' : 'text-tokyo-text-dim'}`}>Agents {isAgentActive ? '(Active)' : ''}</h3>
+        <h3
+          className={`text-md font-medium ${isAgentActive ? 'text-tokyo-blue' : 'text-tokyo-text-dim'}`}
+        >
+          Agents {isAgentActive ? '(Active)' : ''}
+        </h3>
         <div className="mt-1 grid grid-cols-4 gap-2.5 flex-1 auto-rows-min">
           {ALL_AGENTS.map((agentName) => {
             let state = getAssetState(agentName, 'agent') as AssetSelectionState;
             const canClick = isAgentActive && state === 'available';
 
             if (pendingSelection === agentName) state = 'selected-pending' as AssetSelectionState;
-            if (revealedActions.has(actionNumber) && state === 'available') state = 'revealed' as AssetSelectionState;
+            if (revealedActions.has(actionNumber) && state === 'available')
+              state = 'revealed' as AssetSelectionState;
 
             return (
               <div
@@ -162,10 +180,23 @@ export function InformationPanel() {
         <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40">
           <div className="bg-tokyo-surface border border-tokyo-border rounded-lg p-4 w-[320px] shadow-lg">
             <div className="text-tokyo-text font-medium mb-2">Confirm Selection</div>
-            <div className="text-sm text-tokyo-text-dim mb-4">Are you sure you want to select "<span className="text-tokyo-text">{confirmAsset}</span>" for this turn?</div>
+            <div className="text-sm text-tokyo-text-dim mb-4">
+              Are you sure you want to select "
+              <span className="text-tokyo-text">{confirmAsset}</span>" for this turn?
+            </div>
             <div className="flex gap-2 justify-end">
-              <button onClick={cancelSelection} className="px-3 py-1.5 rounded bg-tokyo-border text-white hover:bg-tokyo-border-light text-sm">Cancel</button>
-              <button onClick={confirmSelection} className="px-3 py-1.5 rounded bg-tokyo-accent text-white hover:bg-tokyo-blue text-sm">Confirm</button>
+              <button
+                onClick={cancelSelection}
+                className="px-3 py-1.5 rounded bg-tokyo-border text-white hover:bg-tokyo-border-light text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmSelection}
+                className="px-3 py-1.5 rounded bg-tokyo-accent text-white hover:bg-tokyo-blue text-sm"
+              >
+                Confirm
+              </button>
             </div>
           </div>
         </div>
