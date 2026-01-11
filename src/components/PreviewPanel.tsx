@@ -9,16 +9,24 @@ export function PreviewPanel() {
     agentsBanned,
     agentPicks,
     revealedActions,
-    actionNumber
+    actionNumber,
   } = useTournamentStore();
 
-  const PlayerSection = ({ player, title }: { player: 'P1' | 'P2', title: string }) => {
-    const playerMapBans = mapsBanned.filter(ban => ban.player === player);
-    const playerMapPicks = mapsPicked.filter(pick => pick.player === player);
-    const playerAgentBans = agentsBanned.filter(ban => ban.player === player);
+  const PlayerSection = ({ player, title }: { player: 'P1' | 'P2'; title: string }) => {
+    const playerMapBans = mapsBanned.filter((ban) => ban.player === player);
+    const playerMapPicks = mapsPicked.filter((pick) => pick.player === player);
+    const playerAgentBans = agentsBanned.filter((ban) => ban.player === player);
     const playerAgentPick = agentPicks[player];
 
-    const SlotDisplay = ({ items, maxCount, label }: { items: string[]; maxCount: number; label: string }) => {
+    const SlotDisplay = ({
+      items,
+      maxCount,
+      label,
+    }: {
+      items: string[];
+      maxCount: number;
+      label: string;
+    }) => {
       return (
         <div className="mb-3">
           <div className="text-xs text-tokyo-text-dim mb-1">{label}:</div>
@@ -27,9 +35,9 @@ export function PreviewPanel() {
               const value = items[index];
               const isFilled = Boolean(value);
               const colorClasses = isFilled
-                ? (revealedActions.has(actionNumber)
-                    ? 'bg-tokyo-teal/20 border-tokyo-teal text-tokyo-teal'
-                    : 'bg-tokyo-yellow/20 border-tokyo-yellow text-tokyo-yellow')
+                ? revealedActions.has(actionNumber)
+                  ? 'bg-tokyo-teal/20 border-tokyo-teal text-tokyo-teal'
+                  : 'bg-tokyo-yellow/20 border-tokyo-yellow text-tokyo-yellow'
                 : 'bg-tokyo-surface-light border-tokyo-border-light text-tokyo-text-dim';
               return (
                 <div
@@ -48,21 +56,17 @@ export function PreviewPanel() {
     return (
       <div className="bg-tokyo-surface-light rounded p-3 mb-3">
         <h4 className="font-medium text-tokyo-text mb-3">{title}</h4>
-        
+
         {/* Map Bans */}
-        <SlotDisplay 
-          items={playerMapBans.map(ban => ban.name)}
-          maxCount={3}
-          label="Map Bans"
-        />
-        
+        <SlotDisplay items={playerMapBans.map((ban) => ban.name)} maxCount={3} label="Map Bans" />
+
         {/* Map Picks */}
-        <SlotDisplay 
-          items={playerMapPicks.map(pick => pick.name)}
+        <SlotDisplay
+          items={playerMapPicks.map((pick) => pick.name)}
           maxCount={1}
           label="Map Pick"
         />
-        
+
         {/* Decider (only show for P1 or when selected) */}
         {(player === 'P1' || deciderMap) && (
           <div className="mb-3">
@@ -78,14 +82,14 @@ export function PreviewPanel() {
             </div>
           </div>
         )}
-        
+
         {/* Agent Bans */}
-        <SlotDisplay 
-          items={playerAgentBans.map(ban => ban.name)}
+        <SlotDisplay
+          items={playerAgentBans.map((ban) => ban.name)}
           maxCount={3}
           label="Agent Bans"
         />
-        
+
         {/* Agent Pick */}
         <div className="mb-3">
           <div className="text-xs text-tokyo-text-dim mb-1">Agent Pick:</div>
@@ -106,19 +110,18 @@ export function PreviewPanel() {
   return (
     <div className="flex flex-col space-y-4 h-full">
       <h2 className="text-lg font-semibold text-tokyo-text tracking-tight">Tournament Preview</h2>
-      
+
       <div className="flex-1 overflow-y-auto space-y-4">
         <PlayerSection player="P1" title={teamNames.P1} />
         <PlayerSection player="P2" title={teamNames.P2} />
       </div>
-      
+
       {/* Tournament Progress */}
       <div className="mt-auto pt-4 border-t border-tokyo-border">
         <div className="text-xs text-tokyo-text-dim">
-          Maps Banned: {mapsBanned.length}/6 | 
-          Maps Picked: {mapsPicked.length}/2 | 
-          Agents Banned: {agentsBanned.length}/6 | 
-          Agents Picked: {Object.values(agentPicks).filter(Boolean).length}/2
+          Maps Banned: {mapsBanned.length}/6 | Maps Picked: {mapsPicked.length}/2 | Agents Banned:{' '}
+          {agentsBanned.length}/6 | Agents Picked:{' '}
+          {Object.values(agentPicks).filter(Boolean).length}/2
         </div>
       </div>
     </div>

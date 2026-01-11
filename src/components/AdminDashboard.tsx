@@ -5,9 +5,14 @@ import { InformationPanel } from './InformationPanel';
 import { PreviewPanel } from './PreviewPanel';
 
 export function AdminDashboard() {
-
   return (
-    <div className="w-screen h-screen min-w-[1280px] min-h-[720px] flex flex-col bg-tokyo-background text-tokyo-text overflow-hidden antialiased" style={{fontFamily: 'Geist, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif'}}>
+    <div
+      className="w-screen h-screen min-w-[1280px] min-h-[720px] flex flex-col bg-tokyo-background text-tokyo-text overflow-hidden antialiased"
+      style={{
+        fontFamily:
+          'Geist, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif',
+      }}
+    >
       {/* Header Bar - 60px height */}
       <div className="h-[60px] border-b border-tokyo-border">
         <HeaderBar />

@@ -1,699 +1,445 @@
 // Zustand store for OBS Admin Client - Tournament Management
+//
+// ============================================
+// BACKWARD COMPATIBILITY FACADE
+// ============================================
+//
+// This file now serves as a facade for backward compatibility.
+// The actual store implementation has been split into:
+//   - src/store/tournamentStore.ts (tournament state)
+//   - src/store/timerStore.ts (timer state)
+//   - src/store/uiStore.ts (UI state)
+//   - src/services/overlayBridge.ts (overlay communication)
+//
+// New code should import from:
+//   - import { useTournamentStore } from '../store/tournamentStore'
+//   - import { useTimerStore } from '../store/timerStore'
+//   - import { useUIStore } from '../store/uiStore'
+//
+// Or use the convenience hooks:
+//   - import { useTournamentState, useTimerState } from '../hooks'
+// ============================================
 
 import { create } from 'zustand';
-import type { 
-  TournamentStore,
-  Player,
-  TournamentAction,
-  AssetSelection
-} from '../types/admin.types';
-import {
-  calculateCurrentPlayer,
-  getCurrentPhase,
-  getActionType
-} from '../utils/tournamentHelpers';
+import type { TournamentStore, Player } from '../types/admin.types';
 
-// Transform store data to overlay format
-const transformToOverlayFormat = (state: any) => {
-  // Convert arrays of AssetSelection to P1/P2 object format
-  const mapsBannedByPlayer: Record<'P1' | 'P2', string[]> = { P1: [], P2: [] };
-  const mapsPicked: Record<'P1' | 'P2', string | null> = { P1: null, P2: null };
-  const agentsBannedByPlayer: Record<'P1' | 'P2', string[]> = { P1: [], P2: [] };
-  
-  // Process maps banned
-  state.mapsBanned?.forEach((ban: AssetSelection) => {
-    if (ban.player === 'P1' || ban.player === 'P2') {
-      mapsBannedByPlayer[ban.player].push(ban.name);
+// Import from new stores
+import { useTournamentStore as useNewTournamentStore } from '../store/tournamentStore';
+import { useTimerStore } from '../store/timerStore';
+import { initializeBridge, forceEmit } from './overlayBridge';
+
+// ============================================
+// Auto-advance de-dupe guard
+// ============================================
+// When the timer finishes, both `selectAsset()` and the timer-finished callback can attempt to
+// auto-advance the turn. We guard against double-advancing by scheduling at most one advance
+// per action number, and skipping if the action already changed by the time the task runs.
+let autoAdvanceScheduledForAction: number | null = null;
+let autoAdvanceTimeout: ReturnType<typeof setTimeout> | null = null;
+function scheduleAutoAdvanceOnceForCurrentAction() {
+  const scheduledAction = useNewTournamentStore.getState().actionNumber;
+
+  // Already scheduled for this action; do nothing.
+  if (autoAdvanceScheduledForAction === scheduledAction && autoAdvanceTimeout) return;
+
+  // Cancel any prior pending advance (stale action).
+  if (autoAdvanceTimeout) clearTimeout(autoAdvanceTimeout);
+
+  autoAdvanceScheduledForAction = scheduledAction;
+  autoAdvanceTimeout = setTimeout(() => {
+    const currentAction = useNewTournamentStore.getState().actionNumber;
+
+    // If the turn already advanced via some other path, do not advance again.
+    if (currentAction !== scheduledAction) {
+      autoAdvanceScheduledForAction = null;
+      autoAdvanceTimeout = null;
+      return;
     }
-  });
-  
-  // Process maps picked
-  state.mapsPicked?.forEach((pick: AssetSelection) => {
-    if (pick.player === 'P1' || pick.player === 'P2') {
-      mapsPicked[pick.player] = pick.name;
-    }
-  });
-  
-  // Process agents banned
-  state.agentsBanned?.forEach((ban: AssetSelection) => {
-    if (ban.player === 'P1' || ban.player === 'P2') {
-      agentsBannedByPlayer[ban.player].push(ban.name);
-    }
-  });
-  
-  return {
-    currentPhase: state.currentPhase,
-    currentPlayer: state.currentPlayer,
-    actionNumber: state.actionNumber,
-    teamNames: state.teamNames,
-    mapsBanned: mapsBannedByPlayer,
-    mapsPicked,
-    deciderMap: state.deciderMap,
-    agentsBanned: agentsBannedByPlayer,
-    agentPicks: state.agentPicks,
-    timerState: state.timerState,
-    timerSeconds: state.timerSeconds,
-    // T7 explicit gating fields
-    currentActionPending: state.pendingSelection || null,
-    revealedActionNumbers: Array.from(state.revealedActions || [])
+
+    autoAdvanceScheduledForAction = null;
+    autoAdvanceTimeout = null;
+    useTournamentStore.getState().autoAdvanceTurn();
+  }, 0);
+}
+
+// ============================================
+// Facade store subscriptions (keep facade in sync)
+// ============================================
+// The facade store only updates when `set(syncFromNewStores())` is called.
+// Without subscriptions, timer ticks update `useTimerStore` but *not* the facade,
+// making consumers of `useTournamentStore()` (facade) appear frozen.
+let facadeSubscriptionsInitialized = false;
+let unsubscribeFacadeTimer: (() => void) | null = null;
+let unsubscribeFacadeTournament: (() => void) | null = null;
+function destroyFacadeSubscriptions() {
+  if (unsubscribeFacadeTimer) {
+    unsubscribeFacadeTimer();
+    unsubscribeFacadeTimer = null;
+  }
+  if (unsubscribeFacadeTournament) {
+    unsubscribeFacadeTournament();
+    unsubscribeFacadeTournament = null;
+  }
+  facadeSubscriptionsInitialized = false;
+}
+
+function ensureFacadeSubscriptionsInitialized(
+  set: (
+    partial: Partial<TournamentStore> | ((state: TournamentStore) => Partial<TournamentStore>)
+  ) => void,
+  syncFromNewStores: () => Omit<
+    TournamentStore,
+    keyof import('../types/admin.types').TournamentActions
+  >
+) {
+  if (facadeSubscriptionsInitialized) return;
+
+  // Sync on any timer changes that affect what the facade exposes.
+  unsubscribeFacadeTimer = useTimerStore.subscribe(
+    (state) => [state.status, state.seconds] as const,
+    () => set(syncFromNewStores())
+  );
+
+  // Sync on tournament changes too (in case something updates the split store directly).
+  unsubscribeFacadeTournament = useNewTournamentStore.subscribe(
+    (state) =>
+      [
+        state.currentPhase,
+        state.currentPlayer,
+        state.actionNumber,
+        state.firstPlayer,
+        state.eventStarted,
+        state.phaseAdvancePending,
+        state.teamNames,
+        state.mapsBanned,
+        state.mapsPicked,
+        state.deciderMap,
+        state.agentsBanned,
+        state.agentPicks,
+        state.pendingSelection,
+        state.revealedActions,
+        state.actionHistory,
+        state.lastError,
+      ] as const,
+    () => set(syncFromNewStores())
+  );
+
+  facadeSubscriptionsInitialized = true;
+}
+
+// Cleanup subscriptions during Vite HMR to avoid duplicate subscriptions.
+// (No-op in production builds.)
+(import.meta as any)?.hot?.dispose?.(() => {
+  destroyFacadeSubscriptions();
+});
+
+// Initialize overlay bridge on module load
+let bridgeInitialized = false;
+function ensureBridgeInitialized() {
+  if (!bridgeInitialized && typeof window !== 'undefined') {
+    initializeBridge();
+    bridgeInitialized = true;
+  }
+}
+
+// ============================================
+// FACADE STORE
+// ============================================
+// This store combines the new split stores into the old interface
+// for backward compatibility with existing components.
+
+export const useTournamentStore = create<TournamentStore>((set, get) => {
+  // Ensure bridge is initialized
+  ensureBridgeInitialized();
+
+  // Subscribe to new stores and sync state
+  const syncFromNewStores = (): Omit<
+    TournamentStore,
+    keyof import('../types/admin.types').TournamentActions
+  > => {
+    const tournamentState = useNewTournamentStore.getState();
+    const timerState = useTimerStore.getState();
+
+    return {
+      // Tournament state
+      currentPhase: tournamentState.currentPhase,
+      currentPlayer: tournamentState.currentPlayer,
+      actionNumber: tournamentState.actionNumber,
+      firstPlayer: tournamentState.firstPlayer,
+      eventStarted: tournamentState.eventStarted,
+      phaseAdvancePending: tournamentState.phaseAdvancePending,
+      teamNames: tournamentState.teamNames,
+      mapsBanned: tournamentState.mapsBanned,
+      mapsPicked: tournamentState.mapsPicked,
+      deciderMap: tournamentState.deciderMap,
+      agentsBanned: tournamentState.agentsBanned,
+      agentPicks: tournamentState.agentPicks,
+      pendingSelection: tournamentState.pendingSelection,
+      revealedActions: tournamentState.revealedActions,
+      actionHistory: tournamentState.actionHistory,
+      lastError: tournamentState.lastError,
+
+      // Timer state
+      timerState: timerState.status,
+      timerSeconds: timerState.seconds,
+
+      // UI state
+      isInitialized: true,
+    };
   };
-};
 
-// Tauri event emission for overlay updates
-const emitOverlayUpdate = async (state: any) => {
-  if (typeof window !== 'undefined' && (window as any).__TAURI__) {
-    try {
-      const overlayData = transformToOverlayFormat(state);
-      await (window as any).__TAURI__.event.emit('tournament-update', overlayData);
-    } catch (error) {
-      console.error('Error emitting overlay update:', error);
-    }
-  }
-};
+  // Initial state from new stores
+  const initialState = syncFromNewStores();
 
-export const useTournamentStore = create<TournamentStore>((set, get) => ({
-  // Initial tournament state
-  currentPhase: 'MAP_PHASE',
-  currentPlayer: 'P1',
-  actionNumber: 1,
-  firstPlayer: 'P1',
-  eventStarted: false,
-  // Manual phase advancement gating
-  phaseAdvancePending: null,
-  
-  // Team configuration
-  teamNames: {
-    P1: 'Player 1',
-    P2: 'Player 2'
-  },
-  
-  // Tournament data
-  mapsBanned: [],
-  mapsPicked: [],
-  deciderMap: null,
-  agentsBanned: [],
-  agentPicks: {
-    P1: null,
-    P2: null
-  },
-  
-  // OBS timing flow state
-  pendingSelection: null,
-  revealedActions: new Set(),
-  
-  // Independent timer state
-  timerState: 'ready',
-  timerSeconds: 3,
-  timerInterval: null,
-  
-  // History and UI state
-  actionHistory: [],
-  isInitialized: true,
-  lastError: null,
+  // Keep facade in sync with underlying stores (timer ticks, direct store updates, etc.)
+  ensureFacadeSubscriptionsInitialized(set, syncFromNewStores);
 
-  // Player setup actions
-  setFirstPlayer: (player: Player) => {
-    set((state) => {
-      const newCurrentPlayer = calculateCurrentPlayer(state.actionNumber, player);
-      return {
-        firstPlayer: player,
-        currentPlayer: newCurrentPlayer,
-        lastError: null
-      };
-    });
-  },
+  return {
+    ...initialState,
 
-  setPlayerName: (player: Player, name: string) => {
-    set((state) => {
-      // Allow empty string so user can clear the input before typing a new name
-      const newState = {
-        ...state,
-        teamNames: {
-          ...state.teamNames,
-          [player]: name
-        },
-        lastError: null
-      } as TournamentStore;
-      emitOverlayUpdate(newState);
-      return newState;
-    });
-  },
+    // ----------------------------------------
+    // Player Setup Actions (delegate to new store)
+    // ----------------------------------------
 
-  // Turn control actions
-  nextTurn: () => {
-    // Deprecated: explicit NEXT turn navigation removed in favor of confirm-on-selection
-  },
+    setFirstPlayer: (player: Player) => {
+      useNewTournamentStore.getState().setFirstPlayer(player);
+      set(syncFromNewStores());
+    },
 
-  prevTurn: () => {
-    // Deprecated: explicit PREV turn navigation removed in favor of confirm-on-selection
-  },
+    setPlayerName: (player: Player, name: string) => {
+      useNewTournamentStore.getState().setPlayerName(player, name);
+      set(syncFromNewStores());
+      forceEmit();
+    },
 
-  // Auto-advance after successful, revealed selection when timer completes
-  autoAdvanceTurn: () => {
-    set((state) => {
-      const targetAction = state.actionNumber + 1;
-      // Don't advance beyond action 17
-      if (targetAction > 17) {
-        // Gate entering CONCLUSION until manual advance
-        const gated: TournamentStore = {
-          ...state,
-          phaseAdvancePending: 'CONCLUSION',
-          pendingSelection: null,
-          timerState: 'ready',
-          timerSeconds: 3,
-          lastError: null
-        } as TournamentStore;
-        emitOverlayUpdate(gated);
-        return gated;
+    // ----------------------------------------
+    // Turn Control Actions
+    // ----------------------------------------
+
+    nextTurn: () => {
+      // Deprecated: explicit NEXT turn navigation removed
+    },
+
+    prevTurn: () => {
+      // Deprecated: explicit PREV turn navigation removed
+    },
+
+    autoAdvanceTurn: () => {
+      useNewTournamentStore.getState().autoAdvanceTurn();
+      useTimerStore.getState().resetTimer();
+      set(syncFromNewStores());
+    },
+
+    advancePhase: () => {
+      useNewTournamentStore.getState().advancePhase();
+      useTimerStore.getState().resetTimer();
+      set(syncFromNewStores());
+    },
+
+    startEvent: () => {
+      useNewTournamentStore.getState().startEvent();
+      useTimerStore.getState().resetTimer();
+      set(syncFromNewStores());
+      forceEmit();
+    },
+
+    resetTurn: () => {
+      useNewTournamentStore.getState().resetTurn();
+      useTimerStore.getState().resetTimer();
+      set(syncFromNewStores());
+      forceEmit();
+    },
+
+    // ----------------------------------------
+    // Asset Selection Actions
+    // ----------------------------------------
+
+    selectAsset: (assetName: string) => {
+      const before = useNewTournamentStore.getState();
+      const actionNumberBefore = before.actionNumber;
+
+      useNewTournamentStore.getState().selectAsset(assetName);
+
+      const after = useNewTournamentStore.getState();
+      set(syncFromNewStores());
+      forceEmit();
+
+      // If the timer already finished, only auto-advance when the selection actually succeeded.
+      // Success is represented by the current action being marked revealed.
+      const timerState = useTimerStore.getState();
+      const selectionWasRevealed =
+        after.actionNumber === actionNumberBefore && after.revealedActions.has(actionNumberBefore);
+      if (timerState.status === 'finished' && selectionWasRevealed) {
+        scheduleAutoAdvanceOnceForCurrentAction();
       }
-      const newCurrentPlayer = calculateCurrentPlayer(targetAction, state.firstPlayer);
-      const newPhase = getCurrentPhase(targetAction);
-      // If phase changes, gate advancement until admin approves
-      // With streamlined phases, transitions happen at: action 9→10 (MAP_PHASE→AGENT_PHASE)
-      if (newPhase !== state.currentPhase) {
-        const gated: TournamentStore = {
-          ...state,
-          phaseAdvancePending: newPhase,
-          pendingSelection: null,
-          timerState: 'ready',
-          timerSeconds: 3,
-          lastError: null
-        } as TournamentStore;
-        emitOverlayUpdate(gated);
-        return gated;
-      }
-      // Same-phase auto-advance as usual
-      const adv: TournamentStore = {
-        ...state,
-        actionNumber: targetAction,
-        currentPlayer: newCurrentPlayer,
-        currentPhase: newPhase,
-        pendingSelection: null,
-        timerState: 'ready',
-        timerSeconds: 3,
-        lastError: null
-      } as TournamentStore;
-      emitOverlayUpdate(adv);
-      return adv;
-    });
-  },
+    },
 
-  // Manual phase advancement when gated
-  advancePhase: () => {
-    set((state) => {
-      if (!state.phaseAdvancePending) return state;
-      const targetAction = state.actionNumber + 1;
-      // Entering CONCLUSION: no further actions
-      if (state.phaseAdvancePending === 'CONCLUSION' || targetAction > 17) {
-        const finished: TournamentStore = {
-          ...state,
-          currentPhase: 'CONCLUSION',
-          currentPlayer: null,
-          phaseAdvancePending: null,
-          pendingSelection: null,
-          timerState: 'ready',
-          timerSeconds: 3,
-          lastError: null
-        } as TournamentStore;
-        emitOverlayUpdate(finished);
-        return finished;
-      }
-      const newCurrentPlayer = calculateCurrentPlayer(targetAction, state.firstPlayer);
-      const newPhase = state.phaseAdvancePending;
-      const adv: TournamentStore = {
-        ...state,
-        actionNumber: targetAction,
-        currentPlayer: newCurrentPlayer,
-        currentPhase: newPhase,
-        phaseAdvancePending: null,
-        pendingSelection: null,
-        timerState: 'ready',
-        timerSeconds: 3,
-        lastError: null
-      } as TournamentStore;
-      emitOverlayUpdate(adv);
-      return adv;
-    });
-  },
+    attemptSelection: (assetName: string) => {
+      const tournamentState = useNewTournamentStore.getState();
+      const timerState = useTimerStore.getState();
 
-  startEvent: () => {
-    set((state) => {
-      // Initialize tournament to action 1 with selected first player
-      const newCurrentPlayer = calculateCurrentPlayer(1, state.firstPlayer);
-      const newPhase = getCurrentPhase(1);
-      
-      const newState = {
-        ...state,
-        actionNumber: 1,
-        currentPlayer: newCurrentPlayer,
-        currentPhase: newPhase,
-        phaseAdvancePending: null,
-        eventStarted: true,
-        // Clear all tournament data
-        mapsBanned: [],
-        mapsPicked: [],
-        deciderMap: null,
-        agentsBanned: [],
-        agentPicks: { P1: null, P2: null },
-        actionHistory: [],
-        // Keep team setup configuration
-        lastError: null
-      };
-      
-      emitOverlayUpdate(newState);
-      return newState;
-    });
-  },
-
-  resetTurn: () => {
-    set((state) => {
-      // Clear any pending selection and revert any revealed for current action
-      const currentAction = state.actionNumber;
-      let newState: any = { ...state };
-      
-      // Clear timer
-      if (newState.timerInterval) clearInterval(newState.timerInterval);
-      newState.timerState = 'ready';
-      newState.timerSeconds = 30;
-      
-      // Clear pending
-      newState.pendingSelection = null;
-
-      // Revert current action if present in history
-      const actionToRevert = state.actionHistory.find(a => a.actionNumber === currentAction);
-      if (actionToRevert) {
-        switch (actionToRevert.actionType) {
-          case 'MAP_BAN':
-            newState.mapsBanned = state.mapsBanned.filter(
-              ban => !(ban.name === actionToRevert.selection && ban.player === actionToRevert.player)
-            );
-            break;
-          case 'MAP_PICK':
-            newState.mapsPicked = state.mapsPicked.filter(
-              pick => !(pick.name === actionToRevert.selection && pick.player === actionToRevert.player)
-            );
-            break;
-          case 'DECIDER':
-            newState.deciderMap = null;
-            break;
-          case 'AGENT_BAN':
-            newState.agentsBanned = state.agentsBanned.filter(
-              ban => !(ban.name === actionToRevert.selection && ban.player === actionToRevert.player)
-            );
-            break;
-          case 'AGENT_PICK':
-            newState.agentPicks = {
-              ...state.agentPicks,
-              [actionToRevert.player]: null
-            };
-            break;
-        }
-        newState.actionHistory = state.actionHistory.filter(a => a !== actionToRevert);
-      }
-
-      // Always clear revealed flag for current action on reset
-      {
-        const newRevealed = new Set(state.revealedActions);
-        newRevealed.delete(currentAction);
-        newState.revealedActions = newRevealed;
-      }
-
-      newState.lastError = null;
-      emitOverlayUpdate(newState);
-      return newState;
-    });
-  },
-
-  // Asset selection action (internal immediate selection + reveal)
-  selectAsset: (assetName: string) => {
-    set((state) => {
-      const currentPlayer = state.currentPlayer;
-      
-      if (!currentPlayer) {
-        return { ...state, lastError: 'No active player for selection' };
-      }
-      
-      // Prevent multiple confirmations for the same turn
-      if (state.revealedActions.has(state.actionNumber)) {
-        return { ...state, lastError: 'Selection for this turn already confirmed. Use RESET TURN to change it.' };
-      }
-
-      // Also prevent duplicates in history for same action number
-      if (state.actionHistory.some(a => a.actionNumber === state.actionNumber)) {
-        return { ...state, lastError: 'Selection for this turn already recorded. Use RESET TURN to change it.' };
-      }
-
-      const actionType = getActionType(state.actionNumber);
-      const timestamp = Date.now();
-      
-      // Create new action record
-      const newAction: TournamentAction = {
-        actionNumber: state.actionNumber,
-        player: currentPlayer,
-        actionType,
-        selection: assetName,
-        timestamp
-      };
-      
-      // Create asset selection record
-      const assetSelection: AssetSelection = {
-        name: assetName,
-        player: currentPlayer
-      };
-      
-      // Update state based on action type
-      let newState = { ...state };
-      
-      switch (actionType) {
-        case 'MAP_BAN':
-          newState.mapsBanned = [...state.mapsBanned, assetSelection];
-          break;
-          
-        case 'MAP_PICK':
-          newState.mapsPicked = [...state.mapsPicked, assetSelection];
-          break;
-          
-        case 'DECIDER':
-          // Validate that asset is from picked maps
-          const pickedMapNames = state.mapsPicked.map(pick => pick.name);
-          if (!pickedMapNames.includes(assetName)) {
-            return { ...state, lastError: 'Decider must be selected from picked maps' };
-          }
-          newState.deciderMap = assetName;
-          break;
-          
-        case 'AGENT_BAN':
-          newState.agentsBanned = [...state.agentsBanned, assetSelection];
-          break;
-          
-        case 'AGENT_PICK':
-          newState.agentPicks = {
-            ...state.agentPicks,
-            [currentPlayer]: assetName
-          };
-          break;
-          
-        default:
-          return { ...state, lastError: `Invalid action type: ${actionType}` };
-      }
-      
-      // Add to history
-      newState.actionHistory = [...state.actionHistory, newAction];
-      newState.lastError = null;
-      
-      // Mark as revealed for overlay
-      newState.revealedActions = new Set([...state.revealedActions, state.actionNumber]);
-      newState.pendingSelection = null;
-      
-      // If timer already finished, auto-advance turn immediately
-      if (state.timerState === 'finished') {
-        // Defer to allow state commit
-        setTimeout(() => get().autoAdvanceTurn(), 0);
-      }
-
-      emitOverlayUpdate(newState);
-      return newState;
-    });
-  },
-
-  // Selection attempt with gating rules
-  attemptSelection: (assetName: string) => {
-    set((state) => {
       // Phase advance pending blocks further selections
-      if (state.phaseAdvancePending) {
-        return { ...state, lastError: 'Next phase is ready. Click ADVANCE PHASE to continue.' };
+      if (tournamentState.phaseAdvancePending) {
+        useNewTournamentStore
+          .getState()
+          .setError('Next phase is ready. Click ADVANCE PHASE to continue.');
+        set(syncFromNewStores());
+        return;
       }
+
       // Event must be started
-      if (!state.eventStarted) {
-        return { ...state, lastError: 'Event not started. Click START EVENT to begin turn 1.' };
+      if (!tournamentState.eventStarted) {
+        useNewTournamentStore
+          .getState()
+          .setError('Event not started. Click START EVENT to begin turn 1.');
+        set(syncFromNewStores());
+        return;
       }
+
       // Timer must have started
-      if (state.timerState === 'ready') {
-        return { ...state, lastError: 'Start the timer before selecting a result for this turn.' };
+      if (timerState.status === 'ready') {
+        useNewTournamentStore
+          .getState()
+          .setError('Start the timer before selecting a result for this turn.');
+        set(syncFromNewStores());
+        return;
       }
-      // If rewound/reset, ensure previously revealed flag is cleared for this action
-      if (state.revealedActions.has(state.actionNumber)) {
-        const newRevealed = new Set(state.revealedActions);
-        newRevealed.delete(state.actionNumber);
-        return { ...state, revealedActions: newRevealed, lastError: null } as TournamentStore;
-      }
-      // If already revealed for this turn, block further selections
-      // (handled above)
+
       // Pending cannot be changed unless reset
-      if (state.pendingSelection) {
-        return { ...state, lastError: 'A selection is already pending. Reset the turn to change it.' };
+      if (tournamentState.pendingSelection) {
+        useNewTournamentStore
+          .getState()
+          .setError('A selection is already pending. Reset the turn to change it.');
+        set(syncFromNewStores());
+        return;
       }
-      // If timer finished, select immediately; else set pending
-      if (state.timerState === 'finished') {
-        // Immediate reveal path, lock selection to avoid double-commit
-        const newState = { ...state, pendingSelection: assetName, lastError: null } as TournamentStore;
-        setTimeout(() => get().selectAsset(assetName), 0);
-        return newState;
+
+      // If timer finished, select immediately
+      if (timerState.status === 'finished') {
+        get().selectAsset(assetName);
+        return;
       }
-      if (state.timerState === 'running' || state.timerState === 'paused') {
-        return { ...state, pendingSelection: assetName, lastError: null };
+
+      // If timer running/paused, set as pending
+      if (timerState.status === 'running' || timerState.status === 'paused') {
+        useNewTournamentStore.getState().setPendingSelection(assetName);
+        set(syncFromNewStores());
+        forceEmit();
       }
-      return state;
-    });
-  },
+    },
 
-  // OBS timing flow asset selection
-  selectAssetPending: (assetName: string) => {
-    set((state) => {
-      return {
-        ...state,
-        pendingSelection: assetName,
-        lastError: null
-      };
-    });
-  },
+    selectAssetPending: (assetName: string) => {
+      useNewTournamentStore.getState().setPendingSelection(assetName);
+      set(syncFromNewStores());
+    },
 
-  revealPendingSelection: () => {
-    set((state) => {
-      if (!state.pendingSelection) {
-        return { ...state, lastError: 'No pending selection to reveal' };
+    revealPendingSelection: () => {
+      const pendingSelection = useNewTournamentStore.getState().pendingSelection;
+      if (!pendingSelection) {
+        useNewTournamentStore.getState().setError('No pending selection to reveal');
+        set(syncFromNewStores());
+        return;
       }
-      
-      // Use the standard selectAsset logic with the pending selection
-      get().selectAsset(state.pendingSelection);
-      return state; // selectAsset will handle the state update
-    });
-  },
+      get().selectAsset(pendingSelection);
+    },
 
-  manualReveal: (_assetName: string) => {
-    // Deprecated in T7; no-op
-  },
+    manualReveal: (_assetName: string) => {
+      // Deprecated in T7; no-op
+    },
 
-  // Timer controls (independent system)
-  startTimer: () => {
-    set((state) => {
+    // ----------------------------------------
+    // Timer Controls (delegate to timer store)
+    // ----------------------------------------
+
+    startTimer: () => {
+      const tournamentState = useNewTournamentStore.getState();
+
       // Block if awaiting manual phase advancement
-      if (state.phaseAdvancePending) {
-        return { ...state, lastError: 'Next phase is ready. Click ADVANCE PHASE to continue.' };
+      if (tournamentState.phaseAdvancePending) {
+        useNewTournamentStore
+          .getState()
+          .setError('Next phase is ready. Click ADVANCE PHASE to continue.');
+        set(syncFromNewStores());
+        return;
       }
+
       // Block if event hasn't started
-      if (!state.eventStarted) {
-        return { ...state, lastError: 'Event not started. Click START EVENT to begin turn 1.' };
+      if (!tournamentState.eventStarted) {
+        useNewTournamentStore
+          .getState()
+          .setError('Event not started. Click START EVENT to begin turn 1.');
+        set(syncFromNewStores());
+        return;
       }
-      // If this action was previously revealed (e.g., after rewind), clear it on new timing cycle
-      const clearedRevealed = new Set(state.revealedActions);
-      if (clearedRevealed.has(state.actionNumber)) {
-        clearedRevealed.delete(state.actionNumber);
-      }
-      // Clear existing interval if any
-      if (state.timerInterval) {
-        clearInterval(state.timerInterval);
-      }
-      
-      // Start countdown from current seconds
-      const interval = setInterval(() => {
-        set((currentState) => {
-          const newSeconds = currentState.timerSeconds - 1;
-          
-          if (newSeconds <= 0) {
-            // Timer finished - auto-reveal pending selection
-            if (currentState.timerInterval) {
-              clearInterval(currentState.timerInterval);
-            }
-            
-            // Auto-reveal pending selection if exists (immediate commit)
-            if (currentState.pendingSelection) {
-              const toReveal = currentState.pendingSelection;
-              setTimeout(() => get().selectAsset(toReveal), 0);
-            }
-        
-        const finishedState = {
-              ...currentState,
-              timerSeconds: 0,
-              timerState: 'finished',
-              timerInterval: null
-            } as TournamentStore;
-            emitOverlayUpdate(finishedState);
 
-        // If selection already revealed for this action, auto-advance after timer end
-        if (finishedState.revealedActions.has(finishedState.actionNumber)) {
-          setTimeout(() => get().autoAdvanceTurn(), 0);
-        }
-            return finishedState;
-          }
-          
-          const tickingState = {
-            ...currentState,
-            timerSeconds: newSeconds
-          } as TournamentStore;
-          emitOverlayUpdate(tickingState);
-          return tickingState;
-        });
-      }, 1000);
-      
-      const newState = {
-        ...state,
-        timerState: 'running',
-        timerInterval: interval,
-        lastError: null
-      } as TournamentStore;
-      newState.revealedActions = clearedRevealed;
-      emitOverlayUpdate(newState);
-      return newState;
-    });
-  },
+      // Clear revealed flag for current action if re-starting
+      if (tournamentState.revealedActions.has(tournamentState.actionNumber)) {
+        useNewTournamentStore.getState().clearRevealedAction(tournamentState.actionNumber);
+      }
 
-  pauseTimer: () => {
-    set((state) => {
-      if (state.timerState !== 'running') {
-        return state;
-      }
-      if (state.timerInterval) {
-        clearInterval(state.timerInterval);
-      }
-      
-      const newState = {
-        ...state,
-        timerState: 'paused',
-        timerInterval: null,
-        lastError: null
-      } as TournamentStore;
-      emitOverlayUpdate(newState);
-      return newState;
-    });
-  },
+      useTimerStore.getState().startTimer();
+      set(syncFromNewStores());
+      forceEmit();
+    },
 
-  resetTimer: () => {
-    set((state) => {
-      if (state.timerInterval) {
-        clearInterval(state.timerInterval);
-      }
-      const clearedPending = state.pendingSelection ? 'Timer reset; pending selection cleared. Re-start timer and select again.' : null;
-      const newState = {
-        ...state,
-        timerState: 'ready',
-        timerSeconds: 3,
-        timerInterval: null,
-        pendingSelection: null,
-        lastError: clearedPending
-      } as TournamentStore;
-      emitOverlayUpdate(newState);
-      return newState;
-    });
-  },
+    pauseTimer: () => {
+      useTimerStore.getState().pauseTimer();
+      set(syncFromNewStores());
+      forceEmit();
+    },
 
-  // Tournament management
-  resetTournament: () => {
-    set((state) => {
-      // Clear timer interval
-      if (state.timerInterval) {
-        clearInterval(state.timerInterval);
-      }
-      
-      return {
-        // Reset tournament state
-        currentPhase: 'MAP_PHASE',
-        currentPlayer: null,
-        actionNumber: 1,
-        phaseAdvancePending: null,
-        
-        // Keep team names and first player
-        teamNames: state.teamNames,
-        firstPlayer: state.firstPlayer,
-        
-        // Clear tournament data
-        mapsBanned: [],
-        mapsPicked: [],
-        deciderMap: null,
-        agentsBanned: [],
-        agentPicks: { P1: null, P2: null },
-        
-        // Clear OBS timing state
-        pendingSelection: null,
-        revealedActions: new Set(),
-        
-        // Reset timer
-        timerState: 'ready',
-        timerSeconds: 3,
-        timerInterval: null,
-        
-        // Clear history
-        actionHistory: [],
-        isInitialized: true,
-        lastError: null,
-        
-        // Event gating
-        eventStarted: false
-      };
-    });
-  },
+    resetTimer: () => {
+      useTimerStore.getState().resetTimer();
+      useNewTournamentStore.getState().setPendingSelection(null);
+      set(syncFromNewStores());
+      forceEmit();
+    },
 
-  undoLastAction: () => {
-    set((state) => {
-      if (state.actionHistory.length === 0) {
-        return { ...state, lastError: 'No actions to undo' };
-      }
-      
-      // Get last action and remove from history
-      const lastAction = state.actionHistory[state.actionHistory.length - 1];
-      const newHistory = state.actionHistory.slice(0, -1);
-      
-      // Reverse the action's effects
-      let newState = { ...state, actionHistory: newHistory };
-      
-      switch (lastAction.actionType) {
-        case 'MAP_BAN':
-          newState.mapsBanned = state.mapsBanned.filter(
-            ban => !(ban.name === lastAction.selection && ban.player === lastAction.player)
-          );
-          break;
-          
-        case 'MAP_PICK':
-          newState.mapsPicked = state.mapsPicked.filter(
-            pick => !(pick.name === lastAction.selection && pick.player === lastAction.player)
-          );
-          break;
-          
-        case 'DECIDER':
-          newState.deciderMap = null;
-          break;
-          
-        case 'AGENT_BAN':
-          newState.agentsBanned = state.agentsBanned.filter(
-            ban => !(ban.name === lastAction.selection && ban.player === lastAction.player)
-          );
-          break;
-          
-        case 'AGENT_PICK':
-          newState.agentPicks = {
-            ...state.agentPicks,
-            [lastAction.player]: null
-          };
-          break;
-      }
-      
-      newState.lastError = null;
-      return newState;
-    });
-  },
+    // ----------------------------------------
+    // Tournament Management
+    // ----------------------------------------
 
-  // Error handling
-  setError: (error: string | null) => {
-    set({ lastError: error });
-  }
-}));
+    resetTournament: () => {
+      useTimerStore.getState().resetTimer();
+      useNewTournamentStore.getState().resetTournament();
+      set(syncFromNewStores());
+      forceEmit();
+    },
+
+    undoLastAction: () => {
+      useNewTournamentStore.getState().undoLastAction();
+      set(syncFromNewStores());
+    },
+
+    // ----------------------------------------
+    // Error Handling
+    // ----------------------------------------
+
+    setError: (error: string | null) => {
+      useNewTournamentStore.getState().setError(error);
+      set(syncFromNewStores());
+    },
+  };
+});
+
+// ============================================
+// Setup timer coordination for auto-advance
+// ============================================
+// When timer finishes, reveal pending selection and auto-advance
+
+if (typeof window !== 'undefined') {
+  useTimerStore.getState().setOnTimerFinished(() => {
+    const tournamentState = useNewTournamentStore.getState();
+
+    // If there's a pending selection, reveal it
+    if (tournamentState.pendingSelection) {
+      useTournamentStore.getState().selectAsset(tournamentState.pendingSelection);
+    }
+
+    // If selection is already revealed for this action, auto-advance
+    const currentState = useNewTournamentStore.getState();
+    if (currentState.revealedActions.has(currentState.actionNumber)) {
+      scheduleAutoAdvanceOnceForCurrentAction();
+    }
+  });
+}

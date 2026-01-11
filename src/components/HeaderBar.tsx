@@ -1,4 +1,5 @@
 import { useTournamentStore } from '../services/adminStore';
+import { forceEmit } from '../services/overlayBridge';
 import { useEffect, useState } from 'react';
 
 export function HeaderBar() {
@@ -12,7 +13,9 @@ export function HeaderBar() {
       if (typeof window === 'undefined' || !(window as any).__TAURI__) return;
       try {
         const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
-        const win = (await WebviewWindow.getByLabel('overlay')) || (await WebviewWindow.getByLabel('obs-overlay'));
+        const win =
+          (await WebviewWindow.getByLabel('overlay')) ||
+          (await WebviewWindow.getByLabel('obs-overlay'));
         if (win) {
           try {
             const visible = await win.isVisible();
@@ -35,7 +38,9 @@ export function HeaderBar() {
 
   async function getOverlayWindow() {
     const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
-    return (await WebviewWindow.getByLabel('overlay')) || (await WebviewWindow.getByLabel('obs-overlay'));
+    return (
+      (await WebviewWindow.getByLabel('overlay')) || (await WebviewWindow.getByLabel('obs-overlay'))
+    );
   }
 
   const showOverlay = async () => {
@@ -47,7 +52,7 @@ export function HeaderBar() {
         let overlay = await getOverlayWindow();
         if (!overlay) {
           overlay = new WebviewWindow('overlay', {
-            url: '/overlay.html',
+            url: '/src/overlay/index.html',
             title: 'OBS Overlay',
             width: 1920,
             height: 1080,
@@ -55,18 +60,23 @@ export function HeaderBar() {
             decorations: true,
           });
         }
-        try { await overlay.setDecorations(true); } catch (_) {}
+        try {
+          await overlay.setDecorations(true);
+        } catch (_) {}
         await overlay.show();
         await overlay.setFocus();
         setOverlayOpen(true);
+
+        // Emit current state to overlay after it initializes
+        setTimeout(() => forceEmit(), 500);
       } catch (error) {
         console.error('Error with Tauri overlay:', error);
         // Fallback to browser tab
-        window.open('/overlay.html', '_blank');
+        window.open('/src/overlay/index.html', '_blank');
       }
     } else {
       // Fallback for non-Tauri environment
-      window.open('/overlay.html', '_blank');
+      window.open('/src/overlay/index.html', '_blank');
     }
   };
 
@@ -76,7 +86,9 @@ export function HeaderBar() {
     }
     try {
       const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
-      const overlay = (await WebviewWindow.getByLabel('overlay')) || (await WebviewWindow.getByLabel('obs-overlay'));
+      const overlay =
+        (await WebviewWindow.getByLabel('overlay')) ||
+        (await WebviewWindow.getByLabel('obs-overlay'));
       if (overlay) await overlay.close();
       // Ensure any stray window is also closed
       const stray = await WebviewWindow.getByLabel('obs-overlay');
@@ -95,7 +107,7 @@ export function HeaderBar() {
           Phase: <span className="text-tokyo-blue font-medium">{currentPhase}</span>
         </div>
       </div>
-      
+
       <div className="flex items-center space-x-4">
         <button
           onClick={overlayOpen ? closeOverlay : showOverlay}
@@ -104,9 +116,10 @@ export function HeaderBar() {
         >
           {overlayOpen ? 'Close Overlay' : 'Show Overlay'}
         </button>
-        
+
         <div className="text-sm text-tokyo-text-muted">
-          Current Turn: <span className="text-tokyo-teal font-medium">
+          Current Turn:{' '}
+          <span className="text-tokyo-teal font-medium">
             {eventStarted ? `Turn ${actionNumber}: ${currentPlayer || '—'}` : 'Not started'}
           </span>
         </div>
