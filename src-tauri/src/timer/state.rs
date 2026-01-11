@@ -89,7 +89,7 @@ impl TimerState {
 pub const DEV_TIMER_SECONDS: u32 = 3;
 pub const DEFAULT_TIMER_SECONDS: u32 = 30;
 
-// Baisic tests
+// Basic tests
 #[cfg(test)]
 mod tests {
     use super::*;
