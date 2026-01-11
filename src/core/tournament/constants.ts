@@ -1,5 +1,5 @@
 // Core tournament constants - centralized magic numbers
-// Should probably moved to a config to account for new maps/agents in future
+// Should probably be moved to a config to account for new maps/agents in future
 // but we'll go with this for now.
 
 import type { ActionType, MapName, AgentName } from './types';
